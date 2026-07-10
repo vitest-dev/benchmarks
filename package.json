@@ -1,0 +1,14 @@
+{
+  "name": "@vitest/benchmarks",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.6.0",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "bench": "node scripts/bench.mjs",
+    "compare": "node scripts/compare.mjs"
+  }
+}

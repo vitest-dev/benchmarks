@@ -1,0 +1,23 @@
+{
+  "name": "@bench-app/node-backend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.mjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "dayjs": "1.11.21",
+    "express": "5.2.1",
+    "lodash": "4.18.1",
+    "pino": "10.3.1",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@vitest/coverage-istanbul": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  }
+}

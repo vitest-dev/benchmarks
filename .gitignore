@@ -1,0 +1,10 @@
+node_modules
+.DS_Store
+*.log
+
+# generated sources — run `pnpm generate`
+apps/*/src
+apps/*/tests
+
+# bench output
+results

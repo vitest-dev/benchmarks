@@ -1,0 +1,15 @@
+{
+  "name": "@bench-app/barrel-hell",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@vitest/coverage-istanbul": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  }
+}
