@@ -5,7 +5,6 @@ import { benchTest } from '../../tools/config/bench-config.js'
 export default defineConfig({
   plugins: [vue()],
   test: benchTest({
-    pool: 'forks',
     environment: 'jsdom',
   }),
 })
