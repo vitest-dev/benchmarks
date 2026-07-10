@@ -1,8 +1,10 @@
 // Defines which matrix cells run for each app.
 //
 // A cell is { pool, env, isolate, fsCache, state, workers? }:
-//   pool     forks | threads | vmThreads | vmForks
-//   env      node | jsdom | happy-dom
+//   pool     forks | threads | vmThreads | vmForks | browser
+//            (browser = headless Chromium via playwright; node-pool
+//            dimensions don't apply to it)
+//   env      node | jsdom | happy-dom | chromium
 //   isolate  boolean
 //   fsCache  boolean (fs module cache)
 //   state    cold (all persistent caches wiped before every rep)
@@ -60,6 +62,7 @@ const APPS = {
   'react-spa': {
     envs: ['jsdom', 'happy-dom'],
     primary: 'jsdom',
+    browser: true,
     dims: { pool: ['forks', 'threads', 'vmThreads'], env: ['jsdom', 'happy-dom'], isolate: [t, f], fsCache: [f], state: ['warm'] },
     extra: [
       { pool: 'forks', env: 'jsdom', isolate: t, fsCache: f, state: 'cold' },
@@ -70,6 +73,7 @@ const APPS = {
   'vue-spa': {
     envs: ['jsdom', 'happy-dom'],
     primary: 'jsdom',
+    browser: true,
     dims: { pool: ['forks', 'threads'], env: ['jsdom', 'happy-dom'], isolate: [t, f], fsCache: [f], state: ['warm'] },
     extra: [
       { pool: 'forks', env: 'jsdom', isolate: t, fsCache: f, state: 'cold' },
@@ -78,6 +82,7 @@ const APPS = {
   'design-system': {
     envs: ['jsdom', 'happy-dom'],
     primary: 'jsdom',
+    browser: true,
     dims: { pool: ['forks', 'vmThreads'], env: ['jsdom', 'happy-dom'], isolate: [t, f], fsCache: [f], state: ['warm'] },
     extra: [
       { pool: 'forks', env: 'jsdom', isolate: t, fsCache: f, state: 'cold' },
@@ -122,25 +127,37 @@ function cross(dims) {
   return result
 }
 
+function browserCells(spec, states) {
+  if (!spec.browser)
+    return []
+  return states.map(state => ({ pool: 'browser', env: 'chromium', isolate: true, fsCache: false, state }))
+}
+
 export function cellsFor(app, level) {
   const spec = APPS[app]
   if (!spec)
     throw new Error(`no matrix defined for app "${app}"`)
 
   if (level === 'quick') {
-    return [{ pool: 'forks', env: spec.primary, isolate: true, fsCache: false, state: 'warm' }]
+    return [
+      { pool: 'forks', env: spec.primary, isolate: true, fsCache: false, state: 'warm' },
+      ...browserCells(spec, ['warm']),
+    ]
   }
   if (level === 'full') {
-    return cross({
-      pool: POOLS,
-      env: spec.envs,
-      isolate: [true, false],
-      fsCache: [false, true],
-      state: ['cold', 'warm'],
-      ...(spec.workers ? { workers: spec.workers } : {}),
-    })
+    return [
+      ...cross({
+        pool: POOLS,
+        env: spec.envs,
+        isolate: [true, false],
+        fsCache: [false, true],
+        state: ['cold', 'warm'],
+        ...(spec.workers ? { workers: spec.workers } : {}),
+      }),
+      ...browserCells(spec, ['cold', 'warm']),
+    ]
   }
-  return [...cross(spec.dims), ...(spec.extra ?? [])]
+  return [...cross(spec.dims), ...(spec.extra ?? []), ...browserCells(spec, ['cold', 'warm'])]
 }
 
 export function cellKey(cell) {

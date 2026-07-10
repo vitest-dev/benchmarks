@@ -17,5 +17,6 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir apps/react-spa exec playwright install --with-deps chromium
       - run: node scripts/generate.mjs
       - run: node scripts/bench.mjs --matrix quick --runs 1 --label smoke

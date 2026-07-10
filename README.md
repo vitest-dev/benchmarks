@@ -1,159 +1,226 @@
 # vitest benchmarks
 
-Reference applications for measuring Vitest performance. Every fixture is a
-deterministic, generated model of a real category of JavaScript/TypeScript
-project, and the bench runner measures the option matrix that actually moves
-run time (`pool`, `environment`, `isolate`, `fsModuleCache`, `maxWorkers`,
-cold vs warm caches) against each of them.
-
-The suite has two consumers:
-
-- **Perf work on vitest itself** — A/B a branch against a released version
-  over shapes that are known to bottleneck differently, instead of over one
-  ad-hoc fixture.
-- **`vitest doctor` / performance hints** — each app documents which
-  diagnostic should (and should not) fire for it, so the fixtures double as
-  acceptance tests for the recommendations.
-
-## What determines how long a Vitest run takes
-
-The apps are chosen to cover this dimension space, isolating one dimension
-per fixture where possible. Profiling of Vitest internals consistently
-attributes run time to:
-
-1. **Worker lifecycle × file count** — `isolate: true` pays a worker start
-   (spawn + runtime bundle import + environment setup) per *test file*,
-   `isolate: false` per *worker*. Roughly 200–500ms/file for forks vs
-   5–50ms/file reused (more with a DOM).
-2. **Environment creation** — a fresh jsdom is ~500ms per worker (mostly its
-   require graph), happy-dom ~200ms. Multiplied by files under isolation.
-   vm pools share one environment bundle per worker but build a fresh
-   context per file.
-3. **Module graph size and shape per test file** — every first-party module
-   is transformed once (cached in the server) but *fetched and evaluated*
-   per isolated file: a serial RPC waterfall where graph **depth** costs
-   latency and **width** costs volume.
-4. **Graph sharing across files** — disjoint per-file subgraphs (library
-   style) vs every file pulling the same graph (barrel style) decides how
-   much `isolate: false` and caches can help.
-5. **Barrel files** — importing 3 symbols through a root barrel evaluates
-   the whole library. The single biggest accidental multiplier of (3).
-6. **External dependencies** — packages in `node_modules` are externalized:
-   native imports in node pools (paid once per worker/fork), but
-   re-evaluated per fresh context in vm pools. CJS/ESM interop shapes vary.
-7. **Transform cost** — esbuild TS/JSX is cheap; plugin pipelines (Vue SFC)
-   are not. Only matters cold — transforms are cached warm (and on disk
-   with `fsModuleCache`).
-8. **The tests themselves** — CPU-bound suites are scheduling-bound
-   (`maxWorkers`), and no config change can speed up the tests' own work.
-9. **Caches** — Vite transform/deps caches, the fs module cache, and node's
-   compile cache split every measurement into *cold* (fresh CI) and *warm*
-   (repeated local runs).
-10. **Setup files** — re-imported per isolated file.
-11. **Mixed per-file environments** — `@vitest-environment` pragmas fragment
-    worker reuse.
-
-## The apps
-
-| app | models | shape | isolates / composes |
-|---|---|---|---|
-| [micro-utils](apps/micro-utils) | the *median* OSS package (surveys: ~4 test files, 71% ≤ 15) | 8 modules, 5 test files, no deps | pure startup overhead; the baseline every "win" must not regress |
-| [node-library](apps/node-library) | mid-size published library | 127 modules, 3 layers, 40 test files importing mostly-direct | worker lifecycle vs graph sharing on realistic disjoint subgraphs; fs cache on a medium graph |
-| [node-backend](apps/node-backend) | API service (express 5, zod, pino, dayjs, lodash) | 43 modules, 16 integration-style files doing real work per test | mixed framework/test time, CJS-heavy interop |
-| [deps-heavy](apps/deps-heavy) | thin glue over many npm packages | 30 modules over 10 real deps (CJS monolith, ESM graphs, dual) | externalization: per-fork native import cost vs per-context re-evaluation in vm pools |
-| [react-spa](apps/react-spa) | product SPA with Testing Library | 92 ts/tsx + CSS/CSS-modules, hooks, `vi.mock`ed api, setup file | DOM env per file (jsdom vs happy-dom headline), JSX, setup-file × isolation, mocker |
-| [vue-spa](apps/vue-spa) | Vue 3 app with @vue/test-utils | 37 SFCs + composables, 20 test files | plugin transform pipeline (SFC compile) — the expensive-transform fixture |
-| [design-system](apps/design-system) | component library (the MUI-style trap) | 80 components + CSS, root barrel, 80 test files each importing from `../src` | worst honest case: full graph × DOM env × per-file isolation |
-| [barrel-hell](apps/barrel-hell) | barrel pathology without DOM/JSX | 817 modules behind nested barrels, 20 test files using ~3 symbols each | graph *width* through barrels, nothing else (compare with design-system to subtract the DOM) |
-| [enterprise-monolith](apps/enterprise-monolith) | big-repo CI | ~1280 modules, chains 12 deep, 5 import cycles, aliases, dynamic imports, JSON, 150 test files, 15 jsdom pragmas | graph scale (transform + fetch waterfall), fs cache cold/warm, mixed environments |
-| [cpu-bound](apps/cpu-bound) | suites whose tests do the work | 8 modules, 30 files × ~150ms real CPU | scheduling only: `maxWorkers`, pool spawn — and the false-positive guard: nothing should be recommended here |
-
-Baseline (Apple M4, node 24, vitest 4.1.10, `forks`/`isolate: true`/warm):
-micro-utils 0.28s · node-library 0.89s · node-backend 0.64s · deps-heavy
-2.24s · react-spa 3.10s · vue-spa 2.07s · design-system 8.41s · barrel-hell
-2.06s · enterprise-monolith 7.76s · cpu-bound 1.02s.
+Generated reference apps for measuring Vitest performance. Each app models a real category of project — tiny utility packages, libraries, barrel-file graphs, DOM component suites, dependency-heavy services, a 1300-module monolith — and the bench runner measures the options that move run time against each of them: `pool`, `environment` (jsdom, happy-dom and headless Chromium via browser mode), `isolate`, `fsModuleCache`, `maxWorkers`, cold vs warm caches.
 
 ## Usage
 
 ```sh
 pnpm install
-pnpm generate            # writes apps/*/src and apps/*/tests (gitignored)
+pnpm --dir apps/react-spa exec playwright install chromium   # for the browser cells
+pnpm generate      # writes apps/*/src and apps/*/tests (gitignored, deterministic)
 
-pnpm bench               # default matrix, all apps, 3 reps per cell
-pnpm bench --apps react-spa,design-system --runs 5
-pnpm bench --matrix quick --runs 1        # 1 representative cell per app (CI smoke)
-pnpm bench --matrix full --apps barrel-hell   # full cross product, use with --apps
+pnpm bench                                  # default matrix, every app, 3 reps per cell
+pnpm bench --apps react-spa,barrel-hell --runs 5
+pnpm bench --matrix quick --runs 1          # one representative cell per app
 
-# A/B a local build against the pinned release
+# A/B a local vitest build against the pinned release
 pnpm bench --label main
 pnpm bench --label branch --vitest /path/to/vitest/packages/vitest/vitest.mjs
 pnpm compare results/main.json results/branch.json
 ```
 
-Each app is also a normal standalone Vitest project — `cd apps/react-spa &&
-pnpm test` works, and the committed `vitest.config.ts` files read `BENCH_*`
-environment variables (see [tools/config/bench-config.js](tools/config/bench-config.js))
-so any cell can be reproduced by hand:
+### `bench` options
+
+| option | values | default |
+|---|---|---|
+| `--apps` | comma-separated app names | all apps |
+| `--matrix` | `quick` (1-2 cells per app), `default` (curated cells below), `full` (whole cross product — use with `--apps`) | `default` |
+| `--runs` | timed reps per cell, median reported | `3` |
+| `--label` | name of the result file, `results/<label>.json` | `local` |
+| `--vitest` | path to a `vitest.mjs` binary (or `VITEST_BIN` env) | the pinned install |
+| `BENCH_FS_CACHE_MODE` | `stable` \| `experimental` — where the fs-cache option lives; auto-detected from the vitest version | auto |
+
+`cold` cells wipe every persistent cache (Vite deps/transform caches, vitest cache dirs, fs module cache) before each timed rep — what fresh CI pays. `warm` cells wipe once, prime with an untimed run, then measure — what repeated local runs pay. The host's `NODE_COMPILE_CACHE` is cleared either way; whatever a vitest version enables itself is part of its measurement.
+
+### Running a single cell by hand
+
+Every app is a normal standalone Vitest project. The committed configs read `BENCH_*` variables (see [tools/config/bench-config.js](tools/config/bench-config.js)), so any cell reproduces with plain `vitest run`:
 
 ```sh
 cd apps/design-system
 BENCH_POOL=vmThreads BENCH_ENV=happy-dom BENCH_ISOLATE=false pnpm test
+BENCH_BROWSER=true pnpm test                # headless Chromium
 ```
 
-## Measurement protocol
-
-- **cold** — all persistent caches (`node_modules/.vite`, vitest cache dirs,
-  fs module cache) are wiped before *every* timed rep: CI without cache
-  restore.
-- **warm** — caches wiped once, one untimed priming run, then timed reps:
-  repeated local runs.
-- `NODE_COMPILE_CACHE`/`NODE_DISABLE_COMPILE_CACHE` are cleared from the
-  host environment; whatever a Vitest version enables itself is part of its
-  measurement.
-- Timed quantity is whole-process wall clock of `vitest run` (what a user
-  feels), reported as median + min of N reps; the reporter's `Duration`
-  breakdown line is recorded alongside for attribution.
-- `fsModuleCache` cells always set the option explicitly (its default moved
-  across versions), using `experimental.fsModuleCache` on ≤ 4.1.x and the
-  top-level option on newer versions (override with `BENCH_FS_CACHE_MODE`).
-
-## Expected `vitest doctor` / hint behavior
-
-The fixtures encode what the doctor and the performance hints should say:
-
-| app (config) | expected |
+| variable | values |
 |---|---|
-| design-system, react-spa (jsdom, forks, isolate:true) | environment hint fires (env dominates tracked time); doctor should measure `vmThreads`/`isolate: false`/happy-dom-class wins |
-| barrel-hell, enterprise-monolith (isolate:true, cold) | import/transform dominates → isolate hint and fs-cache-style recommendations are the win |
-| micro-utils | total run is small — hints must stay below their absolute-saving threshold (no noise on tiny suites) |
-| cpu-bound | `tests` dominates the breakdown — **no** hint should fire; any recommendation here is a false positive |
-| micro-utils / node-library under jsdom | the cargo-cult cell: node-only code in a DOM environment (3.5× on node-library) — a future "your tests never touch the DOM" hint |
-| deps-heavy (vm pools) | vm context re-evaluation of externals dominates — recommendations should *not* push vm pools here |
+| `BENCH_POOL` | `forks`, `threads`, `vmThreads`, `vmForks` |
+| `BENCH_ENV` | `node`, `jsdom`, `happy-dom` |
+| `BENCH_ISOLATE` | `true`, `false` |
+| `BENCH_FS_CACHE` | `true`, `false` (with `BENCH_FS_CACHE_MODE=experimental` on vitest ≤ 4.1) |
+| `BENCH_MAX_WORKERS` | a number or a percentage like `50%` |
+| `BENCH_FILE_PARALLELISM` | `true`, `false` |
+| `BENCH_COVERAGE` | `v8`, `istanbul` |
+| `BENCH_BROWSER` | `true` — headless Chromium via playwright (react-spa, vue-spa, design-system) |
 
-## Design rules
+## Results — vitest 4.1.10
 
-- **Generated, not vendored.** Suites this size don't belong in git; a
-  ~200-line generator per app documents its shape precisely and regenerates
-  byte-identical output (`pnpm generate`). Generators are plain node scripts
-  with no dependencies and **no randomness** — structure comes from modular
-  arithmetic, so a diff of a generator is a reviewable change to the
-  fixture's shape.
-- **Pinned everything.** Dependency versions are exact, `packageManager` is
-  set, and the lockfile is committed. The vitest/vite pins are part of the
-  measurement — bump them deliberately, in their own commit.
-- **Tests assert real behavior** (values computed through the import graph),
-  so a vitest correctness regression fails the bench instead of silently
-  measuring broken runs. Assertions avoid snapshots deliberately: snapshot
-  files would make the first run differ from later ones.
-- **Non-goals**: browser mode (needs its own fixture set with provider ×
-  headless dimensions), watch-mode rerun latency, reporter formatting cost.
-  Structural gaps worth adding later: a `projects:` monorepo fixture
-  (per-project overhead), a coverage-focused matrix (`BENCH_COVERAGE=v8|istanbul`
-  is already plumbed through), typecheck runs.
+Apple M4 (10 cores), node v24.13.0, vite 8.1.4. Whole-process wall clock of `vitest run`, median of 3 reps. Regenerate with `pnpm bench --label vitest-4.1.10 && node scripts/render-results.mjs results/vitest-4.1.10.json`.
 
-## CI
+### micro-utils
 
-`.github/workflows/smoke.yml` runs `--matrix quick --runs 1` on every push:
-each app must generate and pass under the pinned Vitest. Timing output in CI
-is informational only — shared runners are too noisy for regression gating;
-use dedicated hardware and `compare.mjs` for real A/B decisions.
+The median OSS package — surveys of Vitest usage put the median project at ~4 test files. 8 modules, 5 test files, no dependencies: startup overhead is everything, and the jsdom/happy-dom rows show what an inherited DOM environment costs a node-only suite.
+
+| pool | env | isolate | cold | warm |
+|---|---|---|---:|---:|
+| forks | node | true | 0.27s | 0.26s |
+| forks | node | false | 0.27s | 0.28s |
+| threads | node | true | 0.28s | 0.26s |
+| threads | node | false | 0.26s | 0.26s |
+| vmThreads | node | true | 0.38s | 0.33s |
+| vmThreads | node | false | 0.40s | 0.34s |
+| vmForks | node | true | 0.39s | 0.32s |
+| vmForks | node | false | 0.40s | 0.32s |
+| forks | jsdom | true | — | 0.60s |
+| forks | happy-dom | true | — | 0.41s |
+
+### node-library
+
+A mid-size published library: 127 modules in 3 layers, 40 test files that import the modules they test directly, so the per-file subgraphs are largely disjoint.
+
+| pool | env | isolate | fsModuleCache | cold | warm |
+|---|---|---|---|---:|---:|
+| forks | node | true | false | 0.94s | 0.94s |
+| forks | node | true | true | 0.97s | 0.81s |
+| forks | node | false | false | 0.47s | 0.48s |
+| forks | node | false | true | 0.48s | 0.35s |
+| threads | node | true | false | 0.79s | 0.80s |
+| threads | node | true | true | 0.88s | 0.76s |
+| threads | node | false | false | 0.41s | 0.41s |
+| threads | node | false | true | 0.49s | 0.35s |
+| forks | jsdom | true | false | — | 3.57s |
+
+### node-backend
+
+An express 5 + zod + pino + dayjs + lodash API service with 16 integration-style test files that do real work per test (hundreds of validations, CRUD flows over in-memory repos).
+
+| pool | isolate | cold | warm |
+|---|---|---:|---:|
+| forks | true | 0.68s | 0.73s |
+| forks | false | — | 0.51s |
+| threads | true | — | 0.65s |
+| threads | false | — | 0.47s |
+| vmThreads | true | — | 0.57s |
+| vmThreads | false | — | 0.54s |
+| vmForks | true | — | 0.56s |
+| vmForks | false | — | 0.55s |
+
+### deps-heavy
+
+Thin glue over 10 real packages covering the shapes that matter for module handling: CJS monoliths (lodash, semver), many-file ESM graphs (lodash-es, date-fns, rxjs), single big ESM (zod), dual packages (yaml, uuid). Node pools pay externals once per worker; vm pools re-evaluate them per context.
+
+| pool | isolate | cold | warm |
+|---|---|---:|---:|
+| forks | true | 2.22s | 2.23s |
+| forks | false | — | 1.24s |
+| threads | true | — | 2.16s |
+| threads | false | — | 1.28s |
+| vmThreads | true | 1.58s | 1.75s |
+| vmThreads | false | — | 1.77s |
+| vmForks | true | — | 1.64s |
+| vmForks | false | — | 1.71s |
+
+### react-spa
+
+A product SPA tested with Testing Library: 92 ts/tsx modules across 6 features, CSS and CSS modules, hooks, a `vi.mock`ed api layer and a jest-dom setup file — run in jsdom, happy-dom and real Chromium.
+
+| pool | env | isolate | fsModuleCache | cold | warm |
+|---|---|---|---|---:|---:|
+| forks | jsdom | true | false | 3.23s | 3.29s |
+| forks | jsdom | false | false | — | 1.04s |
+| forks | happy-dom | true | false | — | 1.85s |
+| forks | happy-dom | false | false | — | 0.74s |
+| threads | jsdom | true | false | — | 2.82s |
+| threads | jsdom | false | false | — | 1.10s |
+| threads | happy-dom | true | false | — | 1.86s |
+| threads | happy-dom | false | false | — | 0.75s |
+| vmThreads | jsdom | true | false | — | 1.36s |
+| vmThreads | jsdom | false | false | — | 1.37s |
+| vmThreads | happy-dom | true | false | — | 1.03s |
+| vmThreads | happy-dom | false | false | — | 1.05s |
+| forks | jsdom | true | true | 3.21s | 3.57s |
+| browser | chromium | true | false | 2.67s | 2.48s |
+
+### vue-spa
+
+37 single-file components plus composables, tested with @vue/test-utils. The SFC compilation through @vitejs/plugin-vue makes this the expensive-transform fixture.
+
+| pool | env | isolate | cold | warm |
+|---|---|---|---:|---:|
+| forks | jsdom | true | 2.24s | 2.21s |
+| forks | jsdom | false | — | 1.07s |
+| forks | happy-dom | true | — | 1.25s |
+| forks | happy-dom | false | — | 0.72s |
+| threads | jsdom | true | — | 1.97s |
+| threads | jsdom | false | — | 1.02s |
+| threads | happy-dom | true | — | 1.28s |
+| threads | happy-dom | false | — | 0.75s |
+| browser | chromium | true | 2.11s | 2.00s |
+
+### design-system
+
+80 components with per-component CSS, and every one of the 80 test files imports from the root barrel — each file pays the whole library plus a DOM environment. The classic component-library trap.
+
+| pool | env | isolate | cold | warm |
+|---|---|---|---:|---:|
+| forks | jsdom | true | 8.21s | 8.37s |
+| forks | jsdom | false | — | 1.35s |
+| forks | happy-dom | true | — | 5.44s |
+| forks | happy-dom | false | — | 1.03s |
+| vmThreads | jsdom | true | — | 2.27s |
+| vmThreads | jsdom | false | — | 2.24s |
+| vmThreads | happy-dom | true | — | 1.88s |
+| vmThreads | happy-dom | false | — | 1.88s |
+| browser | chromium | true | 5.39s | 5.33s |
+
+### barrel-hell
+
+The same barrel pathology without DOM or JSX: 817 modules behind nested barrels, 20 test files using ~3 symbols each, so every file evaluates the full graph.
+
+| pool | isolate | fsModuleCache | cold | warm |
+|---|---|---|---:|---:|
+| forks | true | false | 1.98s | 1.98s |
+| forks | true | true | 2.09s | 1.36s |
+| forks | false | false | 1.42s | 1.37s |
+| forks | false | true | 1.45s | 0.77s |
+| threads | true | false | 1.26s | 1.27s |
+| threads | true | true | 1.65s | 1.08s |
+| threads | false | false | 0.91s | 0.91s |
+| threads | false | true | 1.18s | 0.64s |
+
+### enterprise-monolith
+
+Big-repo CI: ~1280 modules with 12-deep import chains, import cycles, path aliases, dynamic imports, JSON imports, and 15 jsdom-pragma files among the 150 test files (mixed environments fragment worker reuse).
+
+| pool | isolate | fsModuleCache | maxWorkers | cold | warm |
+|---|---|---|---|---:|---:|
+| forks | true | false | default | 8.09s | 7.55s |
+| forks | true | true | default | 8.95s | 6.87s |
+| forks | false | false | default | 2.77s | 3.22s |
+| forks | false | true | default | 2.91s | 2.50s |
+| threads | true | false | default | 5.91s | 5.96s |
+| threads | true | true | default | 6.42s | 5.04s |
+| threads | false | false | default | 2.12s | 2.41s |
+| threads | false | true | default | 2.44s | 2.11s |
+| forks | false | false | 50% | — | 3.26s |
+
+### cpu-bound
+
+30 test files that burn real CPU (hashing, sieving, matrix multiplication) on an 8-module graph. The tests themselves dominate, so only scheduling — `maxWorkers`, pool choice — changes anything.
+
+| pool | isolate | maxWorkers | cold | warm |
+|---|---|---|---:|---:|
+| forks | true | 25% | — | 1.51s |
+| forks | true | 50% | — | 1.11s |
+| forks | true | 100% | — | 0.94s |
+| threads | true | 25% | — | 1.39s |
+| threads | true | 50% | — | 1.04s |
+| threads | true | 100% | — | 0.87s |
+| forks | false | 100% | — | 0.66s |
+
+## Design
+
+- Generators are deterministic — no randomness, structure comes from modular arithmetic — so `pnpm generate` always produces byte-identical sources and a generator diff is a reviewable change to a fixture's shape.
+- Every dependency is pinned exactly and the lockfile is committed; the vitest/vite/jsdom/happy-dom/playwright pins are part of the measurement — bump them deliberately, in their own commit.
+- Tests assert real behavior computed through the import graph, so a vitest correctness regression fails the bench instead of silently timing broken runs.
+- CI (`smoke.yml`) only checks that every app generates and passes under the pinned vitest; shared runners are too noisy for timing — use quiet dedicated hardware and `compare.mjs` for A/B decisions.

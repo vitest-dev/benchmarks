@@ -11,11 +11,13 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "6.0.7",
-    "@vue/test-utils": "2.4.11",
+    "@vitest/browser-playwright": "4.1.10",
     "@vitest/coverage-istanbul": "4.1.10",
     "@vitest/coverage-v8": "4.1.10",
+    "@vue/test-utils": "2.4.11",
     "happy-dom": "20.10.6",
     "jsdom": "29.1.1",
+    "playwright": "1.61.1",
     "vite": "8.1.4",
     "vitest": "4.1.10"
   }

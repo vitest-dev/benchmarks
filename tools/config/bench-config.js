@@ -14,6 +14,8 @@
  *   BENCH_FS_CACHE_MODE    stable (top-level `fsModuleCache`, Vitest > 4.1) |
  *                          experimental (`experimental.fsModuleCache`, <= 4.1)
  *   BENCH_COVERAGE         v8 | istanbul
+ *   BENCH_BROWSER          true — run in headless Chromium via playwright
+ *                          (only apps that pass a loader to benchBrowser)
  */
 export function benchTest(defaults = {}) {
   const e = process.env
@@ -44,4 +46,29 @@ export function benchTest(defaults = {}) {
     test.coverage = { enabled: true, provider: e.BENCH_COVERAGE }
 
   return test
+}
+
+/**
+ * Returns the `browser` part of the test config when BENCH_BROWSER is set.
+ * The provider package is loaded lazily through the app-supplied loader so
+ * node-pool cells don't pay its import cost:
+ *
+ *   test: {
+ *     ...benchTest({ ... }),
+ *     ...await benchBrowser(() => import('@vitest/browser-playwright')),
+ *   }
+ */
+export async function benchBrowser(loadProvider) {
+  const enabled = process.env.BENCH_BROWSER
+  if (!enabled || ['false', '0'].includes(enabled))
+    return {}
+  const { playwright } = await loadProvider()
+  return {
+    browser: {
+      enabled: true,
+      provider: playwright(),
+      instances: [{ browser: 'chromium' }],
+      headless: true,
+    },
+  }
 }

@@ -84,9 +84,14 @@ function runOnce(appDir, bin, cell, mode) {
   }
   delete env.NODE_COMPILE_CACHE
   delete env.NODE_DISABLE_COMPILE_CACHE
-  env.BENCH_POOL = cell.pool
-  env.BENCH_ENV = cell.env
-  env.BENCH_ISOLATE = String(cell.isolate)
+  if (cell.pool === 'browser') {
+    env.BENCH_BROWSER = 'true'
+  }
+  else {
+    env.BENCH_POOL = cell.pool
+    env.BENCH_ENV = cell.env
+    env.BENCH_ISOLATE = String(cell.isolate)
+  }
   env.BENCH_FS_CACHE = String(cell.fsCache)
   env.BENCH_FS_CACHE_MODE = mode
   if (cell.workers)
