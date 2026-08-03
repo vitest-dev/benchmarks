@@ -1,6 +1,6 @@
 # vitest benchmarks
 
-Generated reference apps for measuring Vitest performance. Each app models a real category of project — tiny utility packages, libraries, barrel-file graphs, DOM component suites, dependency-heavy services, a 1300-module monolith — and the bench runner measures the options that move run time against each of them: `pool`, `environment` (jsdom, happy-dom and headless Chromium via browser mode), `isolate`, `fsModuleCache`, `maxWorkers`, cold vs warm caches.
+Generated reference apps for measuring Vitest performance. Each app models a real category of project — tiny utility packages, libraries, barrel-file graphs, DOM component suites, dependency-heavy services, a 1300-module monolith, a long-haul DOM suite that ages its workers — and the bench runner measures the options that move run time against each of them: `pool`, `environment` (jsdom, happy-dom and headless Chromium via browser mode), `isolate`, `fsModuleCache`, `maxWorkers`, cold vs warm caches.
 
 ## Usage
 
@@ -203,6 +203,19 @@ Big-repo CI: ~1280 modules with 12-deep import chains, import cycles, path alias
 | threads | false | false | default | 2.12s | 2.41s |
 | threads | false | true | default | 2.44s | 2.11s |
 | forks | false | false | 50% | — | 3.26s |
+
+### long-haul
+
+The worker-lifetime endurance fixture: 80 jsdom test files through 2 workers, every file holding a ~15MB module-level dataset and rendering tables over it. Node pools rebuild the environment and re-import the externalized dependencies for each of a worker's 40 files; vm pool workers pay once, reuse compiled scripts across contexts, and get recycled several times per run by the pinned 512MB `vmMemoryLimit` — the recycle path no other app enters. Short fixtures understate the vm pools; this is the fixture where they win by a wide margin. (World *retention* is deliberately out of scope: workers report lazy heap numbers, so leak regressions are covered by Vitest's own reachability tests, not wall clock.)
+
+| pool | env | isolate | workers | cold | warm |
+|---|---|---|---|---:|---:|
+| forks | jsdom | true | 2 | — | 19.24s |
+| threads | jsdom | true | 2 | — | 17.32s |
+| vmThreads | jsdom | true | 2 | — | 5.89s |
+| vmForks | jsdom | true | 2 | 6.04s | 6.08s |
+| forks | happy-dom | true | 2 | — | 12.13s |
+| vmForks | happy-dom | true | 2 | — | 5.67s |
 
 ### cpu-bound
 

@@ -101,6 +101,19 @@ const APPS = {
       { pool: 'forks', env: 'node', isolate: f, fsCache: f, state: 'warm', workers: '50%' },
     ],
   },
+  'long-haul': {
+    envs: ['jsdom', 'happy-dom'],
+    primary: 'jsdom',
+    workers: ['2'],
+    // 2 workers x 40 heavy files each: long enough worker lifetimes for
+    // retention, memory-limit recycling and aging to show up in wall time
+    dims: { pool: POOLS, env: ['jsdom'], isolate: [t], fsCache: [f], state: ['warm'], workers: ['2'] },
+    extra: [
+      { pool: 'vmForks', env: 'jsdom', isolate: t, fsCache: f, state: 'cold', workers: '2' },
+      { pool: 'forks', env: 'happy-dom', isolate: t, fsCache: f, state: 'warm', workers: '2' },
+      { pool: 'vmForks', env: 'happy-dom', isolate: t, fsCache: f, state: 'warm', workers: '2' },
+    ],
+  },
   'cpu-bound': {
     envs: ['node'],
     primary: 'node',
