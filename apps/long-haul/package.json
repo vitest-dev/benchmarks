@@ -1,0 +1,17 @@
+{
+  "name": "@bench-app/long-haul",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "generate": "node generate.mjs",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "happy-dom": "20.10.6",
+    "jsdom": "29.1.1",
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
+  }
+}

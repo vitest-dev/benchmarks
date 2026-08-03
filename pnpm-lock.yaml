@@ -155,6 +155,27 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.6)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(yaml@2.9.0))
 
+  apps/long-haul:
+    devDependencies:
+      '@testing-library/dom':
+        specifier: 10.4.1
+        version: 10.4.1
+      '@testing-library/jest-dom':
+        specifier: 6.9.1
+        version: 6.9.1
+      happy-dom:
+        specifier: 20.10.6
+        version: 20.10.6
+      jsdom:
+        specifier: 29.1.1
+        version: 29.1.1
+      vite:
+        specifier: 8.1.4
+        version: 8.1.4(@types/node@26.1.1)(yaml@2.9.0)
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.6)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(yaml@2.9.0))
+
   apps/micro-utils:
     devDependencies:
       '@vitest/coverage-istanbul':
