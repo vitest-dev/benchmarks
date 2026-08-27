@@ -15,8 +15,8 @@
 //   measurement. Reported per cell: median and min of N reps, plus the
 //   parsed `Duration` reporter line of the last rep.
 //
-// A/B comparisons: run once per version with different --label (use
-// --vitest to point at a local build's packages/vitest/vitest.mjs), then
+// A/B comparisons: run once per version with different --label (link a
+// local build into the workspace, see README), then
 //   node scripts/compare.mjs results/a.json results/b.json
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'

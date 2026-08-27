@@ -14,10 +14,35 @@ pnpm bench --apps react-spa,barrel-hell --runs 5
 pnpm bench --matrix quick --runs 1          # one representative cell per app
 
 # A/B a local vitest build against the pinned release
-pnpm bench --label main
-pnpm bench --label branch --vitest /path/to/vitest/packages/vitest/vitest.mjs
+pnpm bench --label main                     # 1. measure the pinned release first
+# 2. link the local build (see below), then
+pnpm bench --label branch
 pnpm compare results/main.json results/branch.json
 ```
+
+### Benchmarking a local vitest build
+
+Link the local build into the workspace instead of pointing `--vitest` at its binary. Dependencies of the apps such as `@testing-library/jest-dom/vitest` import `vitest` themselves, and Node resolves that import to the pinned install, so `--vitest` alone runs the tests against one `expect` and registers matchers on another (every jsdom cell fails with `Invalid Chai property`). The browser cells need the matching `@vitest/browser-playwright` as well.
+
+Add overrides to `pnpm-workspace.yaml` (do not commit them):
+
+```yaml
+overrides:
+  vitest: link:/path/to/vitest/packages/vitest
+  "@vitest/browser-playwright": link:/path/to/vitest/packages/browser-playwright
+  "@vitest/coverage-v8": link:/path/to/vitest/packages/coverage-v8
+  "@vitest/coverage-istanbul": link:/path/to/vitest/packages/coverage-istanbul
+```
+
+Then reinstall and expose the link at the workspace root, which is where packages inside `node_modules/.pnpm` resolve `vitest` from:
+
+```sh
+pnpm install
+ln -sfn /path/to/vitest/packages/vitest node_modules/vitest
+pnpm bench --label branch                   # picks up the linked build, prints its version
+```
+
+Run `pnpm build` in the vitest repository before measuring: the link points at `dist/`. The linked build resolves `vite` from the vitest repository, not from the pin in this workspace, so check that both versions match when comparing Vite-sensitive cells. To go back to the pinned release, remove the overrides and the symlink and run `pnpm install` again.
 
 ### `bench` options
 
@@ -27,7 +52,7 @@ pnpm compare results/main.json results/branch.json
 | `--matrix` | `quick` (1-2 cells per app), `default` (curated cells below), `full` (whole cross product — use with `--apps`) | `default` |
 | `--runs` | timed reps per cell, median reported | `3` |
 | `--label` | name of the result file, `results/<label>.json` | `local` |
-| `--vitest` | path to a `vitest.mjs` binary (or `VITEST_BIN` env) | the pinned install |
+| `--vitest` | path to a `vitest.mjs` binary (or `VITEST_BIN` env); only changes the binary, see [Benchmarking a local vitest build](#benchmarking-a-local-vitest-build) | the pinned install |
 | `BENCH_FS_CACHE_MODE` | `stable` \| `experimental` — where the fs-cache option lives; auto-detected from the vitest version | auto |
 
 `cold` cells wipe every persistent cache (Vite deps/transform caches, vitest cache dirs, fs module cache) before each timed rep — what fresh CI pays. `warm` cells wipe once, prime with an untimed run, then measure — what repeated local runs pay. The host's `NODE_COMPILE_CACHE` is cleared either way; whatever a vitest version enables itself is part of its measurement.
