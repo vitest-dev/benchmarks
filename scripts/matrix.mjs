@@ -10,6 +10,10 @@
 //   state    cold (all persistent caches wiped before every rep)
 //            | warm (one untimed priming run, caches kept between reps)
 //   workers  optional maxWorkers value ('50%', '100%', ...)
+//   coverage none | v8 | istanbul (only set by the coverage matrix)
+//
+// `best` is the fastest warm node-pool row of the app in the README tables;
+// the coverage bench (scripts/bench-coverage.mjs) measures coverage on it.
 //
 // Levels:
 //   quick   — one representative cell per app (CI smoke: does the suite pass)
@@ -24,6 +28,7 @@ const f = false
 
 const APPS = {
   'micro-utils': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: f, state: 'warm' },
     envs: ['node', 'jsdom', 'happy-dom'],
     primary: 'node',
     dims: { pool: POOLS, env: ['node'], isolate: [t, f], fsCache: [f], state: ['cold', 'warm'] },
@@ -35,6 +40,7 @@ const APPS = {
     ],
   },
   'node-library': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: t, state: 'warm' },
     envs: ['node', 'jsdom', 'happy-dom'],
     primary: 'node',
     dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [t, f], fsCache: [f, t], state: ['cold', 'warm'] },
@@ -43,6 +49,7 @@ const APPS = {
     ],
   },
   'node-backend': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: f, state: 'warm' },
     envs: ['node'],
     primary: 'node',
     dims: { pool: POOLS, env: ['node'], isolate: [t, f], fsCache: [f], state: ['warm'] },
@@ -51,6 +58,7 @@ const APPS = {
     ],
   },
   'deps-heavy': {
+    best: { pool: 'vmThreads', env: 'node', isolate: f, fsCache: f, state: 'warm' },
     envs: ['node'],
     primary: 'node',
     dims: { pool: POOLS, env: ['node'], isolate: [t, f], fsCache: [f], state: ['warm'] },
@@ -60,6 +68,7 @@ const APPS = {
     ],
   },
   'react-spa': {
+    best: { pool: 'threads', env: 'happy-dom', isolate: f, fsCache: f, state: 'warm' },
     envs: ['jsdom', 'happy-dom'],
     primary: 'jsdom',
     browser: true,
@@ -71,6 +80,7 @@ const APPS = {
     ],
   },
   'vue-spa': {
+    best: { pool: 'threads', env: 'happy-dom', isolate: f, fsCache: f, state: 'warm' },
     envs: ['jsdom', 'happy-dom'],
     primary: 'jsdom',
     browser: true,
@@ -80,6 +90,7 @@ const APPS = {
     ],
   },
   'design-system': {
+    best: { pool: 'forks', env: 'happy-dom', isolate: f, fsCache: f, state: 'warm' },
     envs: ['jsdom', 'happy-dom'],
     primary: 'jsdom',
     browser: true,
@@ -89,11 +100,13 @@ const APPS = {
     ],
   },
   'barrel-hell': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: t, state: 'warm' },
     envs: ['node'],
     primary: 'node',
     dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [t, f], fsCache: [f, t], state: ['cold', 'warm'] },
   },
   'enterprise-monolith': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: t, state: 'warm' },
     envs: ['node'],
     primary: 'node',
     dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [t, f], fsCache: [f, t], state: ['cold', 'warm'] },
@@ -102,6 +115,7 @@ const APPS = {
     ],
   },
   'long-haul': {
+    best: { pool: 'vmForks', env: 'happy-dom', isolate: t, fsCache: f, state: 'warm', workers: '2' },
     envs: ['jsdom', 'happy-dom'],
     primary: 'jsdom',
     workers: ['2'],
@@ -115,6 +129,7 @@ const APPS = {
     ],
   },
   'cpu-bound': {
+    best: { pool: 'forks', env: 'node', isolate: f, fsCache: f, state: 'warm', workers: '100%' },
     envs: ['node'],
     primary: 'node',
     workers: ['25%', '50%', '100%'],
@@ -173,6 +188,21 @@ export function cellsFor(app, level) {
   return [...cross(spec.dims), ...(spec.extra ?? []), ...browserCells(spec, ['cold', 'warm'])]
 }
 
+// The coverage matrix: the app's fastest row without coverage (the baseline
+// for the overhead), then the same row with each coverage provider.
+export const COVERAGE_PROVIDERS = ['none', 'v8', 'istanbul']
+
+export function bestFor(app) {
+  return APPS[app]?.best ?? null
+}
+
+export function coverageCellsFor(app) {
+  const spec = APPS[app]
+  if (!spec?.best)
+    throw new Error(`no best row defined for app "${app}"`)
+  return COVERAGE_PROVIDERS.map(coverage => ({ ...spec.best, coverage }))
+}
+
 export function cellKey(cell) {
   return [
     cell.pool,
@@ -181,5 +211,6 @@ export function cellKey(cell) {
     `fsCache:${cell.fsCache}`,
     cell.workers ? `workers:${cell.workers}` : 'workers:default',
     cell.state,
+    ...(cell.coverage ? [`coverage:${cell.coverage}`] : []),
   ].join(' ')
 }

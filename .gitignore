@@ -8,3 +8,6 @@ apps/*/tests
 
 # bench output
 results
+
+# coverage reports written by the coverage bench
+apps/*/coverage

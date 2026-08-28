@@ -2,9 +2,11 @@
 // README: one row per configuration, cold and warm as columns, dimension
 // columns that never vary within an app dropped. Several files render side
 // by side, one cold/warm column pair per vitest version, with the change
-// against the first file next to every later version.
+// against the first file next to every later version. The app's `best` row
+// (the one the coverage bench uses) is rendered in bold.
 //   node scripts/render-results.mjs results/vitest-4.1.10.json [more.json ...]
 import { readFileSync } from 'node:fs'
+import { bestFor } from './matrix.mjs'
 
 const files = process.argv.slice(2)
 if (files.length === 0) {
@@ -65,8 +67,12 @@ for (const app of apps) {
   console.log(`### ${app}\n`)
   console.log(`| ${dimensions.map(d => d.name).join(' | ')} | ${columns.map(c => c.header).join(' | ')} |`)
   console.log(`|${dimensions.map(() => '---').join('|')}|${columns.map(() => '---:').join('|')}|`)
+  const best = bestFor(app)
+  const isBest = entry => best && entry.pool === best.pool && entry.env === best.env
+    && entry.isolate === best.isolate && entry.fsCache === best.fsCache && (entry.workers ?? null) === (best.workers ?? null)
   for (const entry of entries) {
-    console.log(`| ${dimensions.map(d => d.get(entry)).join(' | ')} | ${columns.map(c => entry[c.key] ?? '—').join(' | ')} |`)
+    const cell = value => (isBest(entry) ? `**${value}**` : value)
+    console.log(`| ${dimensions.map(d => cell(d.get(entry))).join(' | ')} | ${columns.map(c => entry[c.key] ?? '—').join(' | ')} |`)
   }
   console.log()
 }

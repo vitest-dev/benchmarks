@@ -9,6 +9,7 @@
   "scripts": {
     "generate": "node scripts/generate.mjs",
     "bench": "node scripts/bench.mjs",
+    "bench:coverage": "node scripts/bench-coverage.mjs",
     "compare": "node scripts/compare.mjs"
   }
 }
