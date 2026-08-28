@@ -2,7 +2,7 @@
 
 > The apps, generators, and bench runner in this repository were generated with [Claude Fable 5](https://www.anthropic.com/news/claude-fable-5-mythos-5) and reviewed by the Vitest team. The results below were measured by hand on the hardware stated in each section.
 
-Generated reference apps for measuring Vitest performance. Each app models a real category of project — tiny utility packages, libraries, barrel-file graphs, DOM component suites, dependency-heavy services, a 1300-module monolith, a long-haul DOM suite that ages its workers — and the bench runner measures the options that move run time against each of them: `pool`, `environment` (jsdom, happy-dom and headless Chromium via browser mode), `isolate`, `fsModuleCache`, `maxWorkers`, cold vs warm caches.
+Generated reference apps for measuring Vitest performance. Each app stands for one kind of project: a tiny utility package, a library, barrel-file graphs, DOM component suites, a dependency-heavy service, a 1300-module monolith, and a long-running DOM suite. The bench runner measures the options that change run time on each of them: `pool`, `environment` (jsdom, happy-dom, and headless Chromium via browser mode), `isolate`, `fsModuleCache`, `maxWorkers`, and cold vs warm caches.
 
 ## Usage
 
@@ -24,7 +24,7 @@ pnpm compare results/main.json results/branch.json
 
 ### Benchmarking a local vitest build
 
-Link the local build into the workspace instead of pointing `--vitest` at its binary. Dependencies of the apps such as `@testing-library/jest-dom/vitest` import `vitest` themselves, and Node resolves that import to the pinned install, so `--vitest` alone runs the tests against one `expect` and registers matchers on another (every jsdom cell fails with `Invalid Chai property`). The browser cells need the matching `@vitest/browser-playwright` as well.
+Link the local build into the workspace instead of pointing `--vitest` at its binary. Dependencies such as `@testing-library/jest-dom/vitest` import `vitest` themselves, and Node resolves that import to the pinned install. With `--vitest` alone the tests use one `expect` and the matchers register on another, so every jsdom cell fails with `Invalid Chai property`. The browser cells also need the matching `@vitest/browser-playwright`.
 
 Add overrides to `pnpm-workspace.yaml` (do not commit them):
 
@@ -36,7 +36,7 @@ overrides:
   "@vitest/coverage-istanbul": link:/path/to/vitest/packages/coverage-istanbul
 ```
 
-Then reinstall and expose the link at the workspace root, which is where packages inside `node_modules/.pnpm` resolve `vitest` from:
+Then reinstall and add the link at the workspace root. Packages inside `node_modules/.pnpm` resolve `vitest` from there:
 
 ```sh
 pnpm install
@@ -44,24 +44,24 @@ ln -sfn /path/to/vitest/packages/vitest node_modules/vitest
 pnpm bench --label branch                   # picks up the linked build, prints its version
 ```
 
-Run `pnpm build` in the vitest repository before measuring: the link points at `dist/`. The linked build resolves `vite` from the vitest repository, not from the pin in this workspace, so check that both versions match when comparing Vite-sensitive cells. To go back to the pinned release, remove the overrides and the symlink and run `pnpm install` again.
+Run `pnpm build` in the vitest repository before measuring, because the link points at `dist/`. The linked build resolves `vite` from the vitest repository, not from the pin in this workspace, so check that both versions match before comparing Vite-sensitive cells. To return to the pinned release, remove the overrides and the symlink and run `pnpm install` again.
 
 ### `bench` options
 
 | option | values | default |
 |---|---|---|
 | `--apps` | comma-separated app names | all apps |
-| `--matrix` | `quick` (1-2 cells per app), `default` (curated cells below), `full` (whole cross product — use with `--apps`) | `default` |
+| `--matrix` | `quick` (1-2 cells per app), `default` (curated cells below), `full` (whole cross product, use with `--apps`) | `default` |
 | `--runs` | timed reps per cell, median reported | `3` |
 | `--label` | name of the result file, `results/<label>.json` | `local` |
 | `--vitest` | path to a `vitest.mjs` binary (or `VITEST_BIN` env); only changes the binary, see [Benchmarking a local vitest build](#benchmarking-a-local-vitest-build) | the pinned install |
-| `BENCH_FS_CACHE_MODE` | `stable` \| `experimental` — where the fs-cache option lives; auto-detected from the vitest version | auto |
+| `BENCH_FS_CACHE_MODE` | `stable` \| `experimental`, where the fs-cache option lives; auto-detected from the vitest version | auto |
 
-`cold` cells wipe every persistent cache (Vite deps/transform caches, vitest cache dirs, fs module cache) before each timed rep — what fresh CI pays. `warm` cells wipe once, prime with an untimed run, then measure — what repeated local runs pay. The host's `NODE_COMPILE_CACHE` is cleared either way; whatever a vitest version enables itself is part of its measurement.
+`cold` cells wipe every persistent cache (Vite deps and transform caches, vitest cache dirs, fs module cache) before each timed rep. This is what a fresh CI run pays. `warm` cells wipe once, run once untimed to prime the caches, then measure. This is what repeated local runs pay. The host's `NODE_COMPILE_CACHE` is cleared in both cases; whatever a vitest version enables itself is part of its measurement.
 
 ### Running a single cell by hand
 
-Every app is a normal standalone Vitest project. The committed configs read `BENCH_*` variables (see [tools/config/bench-config.js](tools/config/bench-config.js)), so any cell reproduces with plain `vitest run`:
+Every app is a normal standalone Vitest project. The committed configs read `BENCH_*` variables (see [tools/config/bench-config.js](tools/config/bench-config.js)), so any cell can be reproduced with plain `vitest run`:
 
 ```sh
 cd apps/design-system
@@ -78,15 +78,15 @@ BENCH_BROWSER=true pnpm test                # headless Chromium
 | `BENCH_MAX_WORKERS` | a number or a percentage like `50%` |
 | `BENCH_FILE_PARALLELISM` | `true`, `false` |
 | `BENCH_COVERAGE` | `v8`, `istanbul` |
-| `BENCH_BROWSER` | `true` — headless Chromium via playwright (react-spa, vue-spa, design-system) |
+| `BENCH_BROWSER` | `true`, headless Chromium via playwright (react-spa, vue-spa, design-system) |
 
-## Results — vitest 4.1.10 vs 5.0.0-rc.2
+## Results: vitest 4.1.10 vs 5.0.0-rc.2
 
-Apple M4 (10 cores), node v24.13.0. Whole-process wall clock of `vitest run`, median of 3 reps, both versions measured back to back on the same machine. 4.1.10 is the pinned install on vite 8.1.4; 5.0.0-rc.2 is a local build (with vitest-dev/vitest#11078) linked as described above, resolving vite 8.0.11 from the vitest repository. Regenerate with `pnpm bench --label vitest-4.1.10`, the linked build with `pnpm bench --label vitest-5.0`, then `node scripts/render-results.mjs results/vitest-4.1.10.json results/vitest-5.0.json`.
+Apple M4 (10 cores), node v24.13.0. Whole-process wall clock of `vitest run`, median of 3 reps, both versions measured on the same machine in one session. 4.1.10 is the pinned install on vite 8.1.4. 5.0.0-rc.2 is a local build with vitest-dev/vitest#11078, linked as described above; it resolves vite 8.0.11 from the vitest repository. To regenerate: `pnpm bench --label vitest-4.1.10`, then `pnpm bench --label vitest-5.0` with the linked build, then `node scripts/render-results.mjs results/vitest-4.1.10.json results/vitest-5.0.json`.
 
 ### micro-utils
 
-The median OSS package — surveys of Vitest usage put the median project at ~4 test files. 8 modules, 5 test files, no dependencies: startup overhead is everything, and the jsdom/happy-dom rows show what an inherited DOM environment costs a node-only suite.
+The median open source package: 8 modules, 5 test files, no dependencies. Startup overhead is everything here. The jsdom and happy-dom rows show what a DOM environment costs a node-only suite.
 
 | pool | env | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---:|---:|---:|---:|---:|---:|
@@ -103,7 +103,7 @@ The median OSS package — surveys of Vitest usage put the median project at ~4 
 
 ### node-library
 
-A mid-size published library: 127 modules in 3 layers, 40 test files that import the modules they test directly, so the per-file subgraphs are largely disjoint.
+A mid-size library: 127 modules in 3 layers and 40 test files. Each test file imports the modules it tests directly, so the per-file graphs overlap little.
 
 | pool | env | isolate | fsModuleCache | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|
@@ -119,7 +119,7 @@ A mid-size published library: 127 modules in 3 layers, 40 test files that import
 
 ### node-backend
 
-An express 5 + zod + pino + dayjs + lodash API service with 16 integration-style test files that do real work per test (hundreds of validations, CRUD flows over in-memory repos).
+An API service on express 5, zod, pino, dayjs, and lodash. 16 integration-style test files with real work per test: hundreds of validations and CRUD flows over in-memory repositories.
 
 | pool | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -134,7 +134,7 @@ An express 5 + zod + pino + dayjs + lodash API service with 16 integration-style
 
 ### deps-heavy
 
-Thin glue over 10 real packages covering the shapes that matter for module handling: CJS monoliths (lodash, semver), many-file ESM graphs (lodash-es, date-fns, rxjs), single big ESM (zod), dual packages (yaml, uuid). Node pools pay externals once per worker; vm pools re-evaluate them per context.
+Thin code over 10 real packages that cover the module shapes that matter: CJS monoliths (lodash, semver), many-file ESM graphs (lodash-es, date-fns, rxjs), one big ESM file (zod), and dual packages (yaml, uuid). Node pools load externals once per worker; vm pools evaluate them again in each context.
 
 | pool | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -149,7 +149,7 @@ Thin glue over 10 real packages covering the shapes that matter for module handl
 
 ### react-spa
 
-A product SPA tested with Testing Library: 92 ts/tsx modules across 6 features, CSS and CSS modules, hooks, a `vi.mock`ed api layer and a jest-dom setup file — run in jsdom, happy-dom and real Chromium.
+A React SPA tested with Testing Library: 92 ts/tsx modules in 6 features, CSS and CSS modules, hooks, a mocked API layer, and a jest-dom setup file. Runs in jsdom, happy-dom, and real Chromium.
 
 | pool | env | isolate | fsModuleCache | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|
@@ -170,7 +170,7 @@ A product SPA tested with Testing Library: 92 ts/tsx modules across 6 features, 
 
 ### vue-spa
 
-37 single-file components plus composables, tested with @vue/test-utils. The SFC compilation through @vitejs/plugin-vue makes this the expensive-transform fixture.
+37 single-file components plus composables, tested with @vue/test-utils. SFC compilation through @vitejs/plugin-vue makes this the expensive-transform app.
 
 | pool | env | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---:|---:|---:|---:|---:|---:|
@@ -186,7 +186,7 @@ A product SPA tested with Testing Library: 92 ts/tsx modules across 6 features, 
 
 ### design-system
 
-80 components with per-component CSS, and every one of the 80 test files imports from the root barrel — each file pays the whole library plus a DOM environment. The classic component-library trap.
+80 components with per-component CSS. Every one of the 80 test files imports from the root barrel, so each file pays for the whole library plus a DOM environment.
 
 | pool | env | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---:|---:|---:|---:|---:|---:|
@@ -202,7 +202,7 @@ A product SPA tested with Testing Library: 92 ts/tsx modules across 6 features, 
 
 ### barrel-hell
 
-The same barrel pathology without DOM or JSX: 817 modules behind nested barrels, 20 test files using ~3 symbols each, so every file evaluates the full graph.
+The same barrel problem without DOM or JSX: 817 modules behind nested barrels and 20 test files that use about 3 symbols each. Every file evaluates the full graph.
 
 | pool | isolate | fsModuleCache | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---:|---:|---:|---:|---:|---:|
@@ -217,7 +217,7 @@ The same barrel pathology without DOM or JSX: 817 modules behind nested barrels,
 
 ### enterprise-monolith
 
-Big-repo CI: ~1280 modules with 12-deep import chains, import cycles, path aliases, dynamic imports, JSON imports, and 15 jsdom-pragma files among the 150 test files (mixed environments fragment worker reuse).
+A large monorepo: about 1280 modules with 12-deep import chains, import cycles, path aliases, dynamic imports, JSON imports, and 150 test files. 15 of them use a jsdom pragma, so mixed environments limit worker reuse.
 
 | pool | isolate | fsModuleCache | maxWorkers | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---|---:|---:|---:|---:|---:|---:|
@@ -233,7 +233,7 @@ Big-repo CI: ~1280 modules with 12-deep import chains, import cycles, path alias
 
 ### long-haul
 
-The worker-lifetime endurance fixture: 80 jsdom test files through 2 workers, every file holding a ~15MB module-level dataset and rendering tables over it. Node pools rebuild the environment and re-import the externalized dependencies for each of a worker's 40 files; vm pool workers pay once, reuse compiled scripts across contexts, and get recycled several times per run by the pinned 512MB `vmMemoryLimit` — the recycle path no other app enters. Short fixtures understate the vm pools; this is the fixture where they win by a wide margin. (World *retention* is deliberately out of scope: workers report lazy heap numbers, so leak regressions are covered by Vitest's own reachability tests, not wall clock.)
+A long-running DOM suite: 80 jsdom test files through 2 workers, each file holding a 15MB module-level dataset and rendering tables over it. Node pools rebuild the environment and import the external dependencies again for each of a worker's 40 files. vm pool workers pay once, reuse compiled scripts across contexts, and get recycled by the pinned 512MB `vmMemoryLimit` several times per run. This is the app where the vm pools win by a wide margin. Memory retention across files is out of scope here.
 
 | pool | env | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -246,7 +246,7 @@ The worker-lifetime endurance fixture: 80 jsdom test files through 2 workers, ev
 
 ### cpu-bound
 
-30 test files that burn real CPU (hashing, sieving, matrix multiplication) on an 8-module graph. The tests themselves dominate, so only scheduling — `maxWorkers`, pool choice — changes anything.
+30 test files that burn real CPU (hashing, sieving, matrix multiplication) on an 8-module graph. The tests dominate, so only scheduling (`maxWorkers`, pool choice) changes anything.
 
 | pool | isolate | maxWorkers | 4.1.10 cold | 5.0.0-rc.2 cold | Δ | 4.1.10 warm | 5.0.0-rc.2 warm | Δ |
 |---|---|---|---:|---:|---:|---:|---:|---:|
@@ -260,7 +260,7 @@ The worker-lifetime endurance fixture: 80 jsdom test files through 2 workers, ev
 
 ## Design
 
-- Generators are deterministic — no randomness, structure comes from modular arithmetic — so `pnpm generate` always produces byte-identical sources and a generator diff is a reviewable change to a fixture's shape.
-- Every dependency is pinned exactly and the lockfile is committed; the vitest/vite/jsdom/happy-dom/playwright pins are part of the measurement — bump them deliberately, in their own commit.
-- Tests assert real behavior computed through the import graph, so a vitest correctness regression fails the bench instead of silently timing broken runs.
-- CI (`smoke.yml`) only checks that every app generates and passes under the pinned vitest; shared runners are too noisy for timing — use quiet dedicated hardware and `compare.mjs` for A/B decisions.
+- Generators are deterministic: no randomness, the structure comes from modular arithmetic. `pnpm generate` produces byte-identical sources, so a generator diff is a reviewable change to an app's shape.
+- Every dependency is pinned exactly and the lockfile is committed. The vitest, vite, jsdom, happy-dom, and playwright pins are part of the measurement. Bump them on purpose, in their own commit.
+- Tests assert real behavior computed through the import graph, so a vitest correctness regression fails the bench instead of timing broken runs.
+- CI (`smoke.yml`) only checks that every app generates and passes under the pinned vitest. Shared runners are too noisy for timing; use quiet dedicated hardware and `compare.mjs` for A/B decisions.
