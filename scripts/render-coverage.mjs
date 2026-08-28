@@ -27,12 +27,13 @@ const delta = (before, after) => {
   return Math.abs(pct) < 1.5 ? '~0' : `${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(0)}%`
 }
 
+const LABELS = { none: 'no coverage', v8: 'coverage-v8', istanbul: 'coverage-istanbul' }
 const many = versions.length > 1
 const head = ['app']
 const align = ['---']
 for (const provider of COVERAGE_PROVIDERS) {
   versions.forEach((version, index) => {
-    head.push(many ? `${version.label} ${provider}` : provider)
+    head.push(many ? `${version.label} ${LABELS[provider]}` : LABELS[provider])
     align.push('---:')
     if (index > 0) {
       head.push('Δ')
