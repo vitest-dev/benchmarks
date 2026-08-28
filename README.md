@@ -91,7 +91,7 @@ pnpm bench:coverage --label vitest-5.0-coverage
 node scripts/render-coverage.mjs results/vitest-4.1.10-coverage.json results/vitest-5.0-coverage.json
 ```
 
-The reporter's `Duration` line covers the tests only. The coverage post-processing runs after it, so the runner sets `DEBUG=vitest:coverage` and records the provider's `Generate coverage total time` line next to the wall clock. `ast-v8-to-istanbul`, the converter under `@vitest/coverage-v8`, is part of the v8 measurement; the runner prints its version, and the result file records it in `meta.astV8ToIstanbul`.
+The reporter's `Duration` line covers the tests only, so the tables report the whole-process wall clock. The runner also sets `DEBUG=vitest:coverage` and stores the provider's `Generate coverage total time` in the result file (`generate`), together with the `ast-v8-to-istanbul` version under `@vitest/coverage-v8` (`meta.astV8ToIstanbul`).
 
 ## Results: vitest 4.1.10 vs 5.0.0
 
@@ -273,119 +273,21 @@ A long-running DOM suite: 80 jsdom test files through 2 workers, each file holdi
 
 ## Coverage: vitest 4.1.10 vs 5.0.0
 
-Same machine and protocol as above, `pnpm bench:coverage`, median of 3 reps (design-system and long-haul: 5 reps). 4.1.10 is the pinned install with `@vitest/coverage-v8` 4.1.10 on `ast-v8-to-istanbul` 1.0.4. 5.0.0 is the local build (5.0.0-rc.2 plus 41 commits, `130f79b8b`) with its own `@vitest/coverage-v8` on `ast-v8-to-istanbul` 1.0.5. Each app runs on its fastest warm row from the tables above, with the default coverage options: only files loaded by the tests are covered, and the `text`, `html`, `clover`, and `json` reports are written.
+Whole-process wall clock of `vitest run` on the bold row of each app above, median of 3 reps (design-system and long-haul: 5 reps), without coverage and with each provider. Same machine and protocol as above. 4.1.10 is the pinned install with `@vitest/coverage-v8` 4.1.10 on `ast-v8-to-istanbul` 1.0.4. 5.0.0 is the local build (5.0.0-rc.2 plus 41 commits, `130f79b8b`) with its own `@vitest/coverage-v8` on `ast-v8-to-istanbul` 1.0.5. Default coverage options: only files loaded by the tests are covered, and the `text`, `html`, `clover`, and `json` reports are written. To regenerate: `pnpm bench:coverage --label vitest-4.1.10-coverage`, then `pnpm bench:coverage --label vitest-5.0-coverage` with the linked build, then `node scripts/render-coverage.mjs results/vitest-4.1.10-coverage.json results/vitest-5.0-coverage.json`.
 
-Columns: `wall` is the whole-process wall clock of `vitest run`. `overhead` is the wall minus the wall of the `none` row, so it includes collection, conversion, and the report files. `generate` is the provider's own `Generate coverage total time` from `DEBUG=vitest:coverage`: the conversion of the raw coverage into istanbul maps, without the report files. Values under about 50ms are inside the noise of one run.
-
-### micro-utils
-
-pool threads, env node, isolate false, fsModuleCache false, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
+| app | 4.1.10 none | 5.0.0 none | Δ | 4.1.10 v8 | 5.0.0 v8 | Δ | 4.1.10 istanbul | 5.0.0 istanbul | Δ |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.25s | 0.24s | −2% | — | — | — | — | — | — |
-| v8 | 0.29s | 0.29s | ~0 | 0.05s | 0.05s | +2% | 10ms | 15ms | +50% |
-| istanbul | 0.39s | 0.38s | −4% | 0.15s | 0.14s | −7% | 2ms | 2ms | ~0 |
-
-### node-library
-
-pool threads, env node, isolate false, fsModuleCache true, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.29s | 0.28s | −3% | — | — | — | — | — | — |
-| v8 | 0.53s | 0.51s | −4% | 0.25s | 0.23s | −5% | 93ms | 93ms | ~0 |
-| istanbul | 0.65s | 0.56s | −14% | 0.36s | 0.28s | −23% | 83ms | 93ms | +12% |
-
-### node-backend
-
-pool threads, env node, isolate false, fsModuleCache false, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.43s | 0.41s | −4% | — | — | — | — | — | — |
-| v8 | 0.55s | 0.54s | ~0 | 0.12s | 0.13s | +12% | 26ms | 32ms | +23% |
-| istanbul | 0.69s | 0.66s | −5% | 0.26s | 0.24s | −7% | 5ms | 5ms | ~0 |
-
-### deps-heavy
-
-pool vmThreads, env node, isolate false, fsModuleCache false, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 1.63s | 0.69s | −57% | — | — | — | — | — | — |
-| v8 | 1.86s | 0.92s | −51% | 0.23s | 0.23s | −3% | 22ms | 40ms | +82% |
-| istanbul | 1.82s | 0.86s | −53% | 0.19s | 0.16s | −16% | 4ms | 5ms | +25% |
-
-### react-spa
-
-pool threads, env happy-dom, isolate false, fsModuleCache false, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.70s | 0.69s | −2% | — | — | — | — | — | — |
-| v8 | 0.87s | 0.87s | ~0 | 0.16s | 0.18s | +10% | 49ms | 60ms | +22% |
-| istanbul | 0.98s | 0.95s | −3% | 0.27s | 0.25s | −7% | 8ms | 8ms | ~0 |
-
-### vue-spa
-
-pool threads, env happy-dom, isolate false, fsModuleCache false, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.68s | 0.70s | +4% | — | — | — | — | — | — |
-| v8 | 0.78s | 0.79s | ~0 | 0.11s | 0.09s | −17% | 30ms | 38ms | +27% |
-| istanbul | 0.99s | 0.93s | −7% | 0.32s | 0.22s | −31% | 5ms | 5ms | ~0 |
-
-### design-system
-
-pool forks, env happy-dom, isolate false, fsModuleCache false, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.93s | 0.92s | ~0 | — | — | — | — | — | — |
-| v8 | 1.20s | 1.22s | +2% | 0.27s | 0.29s | +9% | 83ms | 99ms | +19% |
-| istanbul | 1.45s | 1.37s | −5% | 0.52s | 0.45s | −13% | 70ms | 71ms | ~0 |
-
-### barrel-hell
-
-pool threads, env node, isolate false, fsModuleCache true, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.63s | 0.57s | −9% | — | — | — | — | — | — |
-| v8 | 1.51s | 1.29s | −15% | 0.88s | 0.71s | −19% | 458ms | 312ms | −32% |
-| istanbul | 2.40s | 1.69s | −30% | 1.77s | 1.12s | −37% | 504ms | 491ms | −3% |
-
-### enterprise-monolith
-
-pool threads, env node, isolate false, fsModuleCache true, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 1.96s | 1.96s | ~0 | — | — | — | — | — | — |
-| v8 | 4.97s | 4.07s | −18% | 3.01s | 2.11s | −30% | 1899ms | 1332ms | −30% |
-| istanbul | 10.84s | 6.88s | −36% | 8.87s | 4.92s | −45% | 3383ms | 3396ms | ~0 |
-
-### long-haul
-
-pool vmForks, env happy-dom, isolate true, fsModuleCache false, maxWorkers 2, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 5.37s | 3.98s | −26% | — | — | — | — | — | — |
-| v8 | 8.16s | 7.48s | −8% | 2.79s | 3.50s | +26% | 125ms | 145ms | +16% |
-| istanbul | 6.45s | 4.75s | −26% | 1.08s | 0.78s | −28% | 18ms | 19ms | +6% |
-
-### cpu-bound
-
-pool forks, env node, isolate false, fsModuleCache false, maxWorkers 100%, warm.
-
-| coverage | 4.1.10 wall | 5.0.0 wall | Δ | 4.1.10 overhead | 5.0.0 overhead | Δ | 4.1.10 generate | 5.0.0 generate | Δ |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| none | 0.65s | 0.63s | −4% | — | — | — | — | — | — |
-| v8 | 1.00s | 1.00s | ~0 | 0.35s | 0.37s | +6% | 14ms | 29ms | +107% |
-| istanbul | 0.93s | 0.90s | −2% | 0.27s | 0.28s | +2% | 8ms | 6ms | −25% |
+| micro-utils | 0.25s | 0.24s | −2% | 0.29s | 0.29s | ~0 | 0.39s | 0.38s | −4% |
+| node-library | 0.29s | 0.28s | −3% | 0.53s | 0.51s | −4% | 0.65s | 0.56s | −14% |
+| node-backend | 0.43s | 0.41s | −4% | 0.55s | 0.54s | ~0 | 0.69s | 0.66s | −5% |
+| deps-heavy | 1.63s | 0.69s | −57% | 1.86s | 0.92s | −51% | 1.82s | 0.86s | −53% |
+| react-spa | 0.70s | 0.69s | −2% | 0.87s | 0.87s | ~0 | 0.98s | 0.95s | −3% |
+| vue-spa | 0.68s | 0.70s | +4% | 0.78s | 0.79s | ~0 | 0.99s | 0.93s | −7% |
+| design-system | 0.93s | 0.92s | ~0 | 1.20s | 1.22s | +2% | 1.45s | 1.37s | −5% |
+| barrel-hell | 0.63s | 0.57s | −9% | 1.51s | 1.29s | −15% | 2.40s | 1.69s | −30% |
+| enterprise-monolith | 1.96s | 1.96s | ~0 | 4.97s | 4.07s | −18% | 10.84s | 6.88s | −36% |
+| long-haul | 5.37s | 3.98s | −26% | 8.16s | 7.48s | −8% | 6.45s | 4.75s | −26% |
+| cpu-bound | 0.65s | 0.63s | −4% | 1.00s | 1.00s | ~0 | 0.93s | 0.90s | −2% |
 
 ## Design
 
