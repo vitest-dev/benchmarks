@@ -1,5 +1,7 @@
 # vitest benchmarks
 
+> The apps, generators, and bench runner in this repository were generated with [Claude Fable 5](https://www.anthropic.com/news/claude-fable-5-mythos-5) and reviewed by the Vitest team. The results below were measured by hand on the hardware stated in each section.
+
 Generated reference apps for measuring Vitest performance. Each app models a real category of project — tiny utility packages, libraries, barrel-file graphs, DOM component suites, dependency-heavy services, a 1300-module monolith, a long-haul DOM suite that ages its workers — and the bench runner measures the options that move run time against each of them: `pool`, `environment` (jsdom, happy-dom and headless Chromium via browser mode), `isolate`, `fsModuleCache`, `maxWorkers`, cold vs warm caches.
 
 ## Usage
