@@ -275,7 +275,7 @@ A long-running DOM suite: 80 jsdom test files through 2 workers, each file holdi
 
 Whole-process wall clock of `vitest run` on the bold row of each app above, median of 3 reps (design-system and long-haul: 5 reps), without coverage and with each provider. Same machine and protocol as above. 4.1.10 is the pinned install with `@vitest/coverage-v8` 4.1.10 on `ast-v8-to-istanbul` 1.0.4. 5.0.0 is the local build (5.0.0-rc.2 plus 41 commits, `130f79b8b`) with its own `@vitest/coverage-v8` on `ast-v8-to-istanbul` 1.0.5. Default coverage options: only files loaded by the tests are covered, and the `text`, `html`, `clover`, and `json` reports are written. To regenerate: `pnpm bench:coverage --label vitest-4.1.10-coverage`, then `pnpm bench:coverage --label vitest-5.0-coverage` with the linked build, then `node scripts/render-coverage.mjs results/vitest-4.1.10-coverage.json results/vitest-5.0-coverage.json`.
 
-| app | 4.1.10 no coverage | 5.0.0 no coverage | Δ | 4.1.10 coverage-v8 | 5.0.0 coverage-v8 | Δ | 4.1.10 coverage-istanbul | 5.0.0 coverage-istanbul | Δ |
+| app | 4.1.10 none | 5.0.0 none | Δ | 4.1.10 v8 | 5.0.0 v8 | Δ | 4.1.10 istanbul | 5.0.0 istanbul | Δ |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | micro-utils | 0.25s | 0.24s | −2% | 0.29s | 0.29s | ~0 | 0.39s | 0.38s | −4% |
 | node-library | 0.29s | 0.28s | −3% | 0.53s | 0.51s | −4% | 0.65s | 0.56s | −14% |
