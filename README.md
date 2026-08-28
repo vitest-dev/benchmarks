@@ -78,183 +78,183 @@ BENCH_BROWSER=true pnpm test                # headless Chromium
 | `BENCH_COVERAGE` | `v8`, `istanbul` |
 | `BENCH_BROWSER` | `true` — headless Chromium via playwright (react-spa, vue-spa, design-system) |
 
-## Results — vitest 4.1.10
+## Results — vitest 4.1.10 vs 5.0.0-rc.2
 
-Apple M4 (10 cores), node v24.13.0, vite 8.1.4. Whole-process wall clock of `vitest run`, median of 3 reps. Regenerate with `pnpm bench --label vitest-4.1.10 && node scripts/render-results.mjs results/vitest-4.1.10.json`.
+Apple M4 (10 cores), node v24.13.0. Whole-process wall clock of `vitest run`, median of 3 reps, both versions measured back to back on the same machine. 4.1.10 is the pinned install on vite 8.1.4; 5.0.0-rc.2 is a local build (with vitest-dev/vitest#11078) linked as described above, resolving vite 8.0.11 from the vitest repository. Regenerate with `pnpm bench --label vitest-4.1.10`, the linked build with `pnpm bench --label vitest-5.0`, then `node scripts/render-results.mjs results/vitest-4.1.10.json results/vitest-5.0.json`.
 
 ### micro-utils
 
 The median OSS package — surveys of Vitest usage put the median project at ~4 test files. 8 modules, 5 test files, no dependencies: startup overhead is everything, and the jsdom/happy-dom rows show what an inherited DOM environment costs a node-only suite.
 
-| pool | env | isolate | cold | warm |
-|---|---|---|---:|---:|
-| forks | node | true | 0.27s | 0.26s |
-| forks | node | false | 0.27s | 0.28s |
-| threads | node | true | 0.28s | 0.26s |
-| threads | node | false | 0.26s | 0.26s |
-| vmThreads | node | true | 0.38s | 0.33s |
-| vmThreads | node | false | 0.40s | 0.34s |
-| vmForks | node | true | 0.39s | 0.32s |
-| vmForks | node | false | 0.40s | 0.32s |
-| forks | jsdom | true | — | 0.60s |
-| forks | happy-dom | true | — | 0.41s |
+| pool | env | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---:|---:|---:|---:|
+| forks | node | true | 0.27s | 0.25s | 0.27s | 0.25s |
+| forks | node | false | 0.26s | 0.25s | 0.26s | 0.26s |
+| threads | node | true | 0.25s | 0.24s | 0.25s | 0.24s |
+| threads | node | false | 0.25s | 0.24s | 0.25s | 0.24s |
+| vmThreads | node | true | 0.39s | 0.37s | 0.28s | 0.27s |
+| vmThreads | node | false | 0.39s | 0.39s | 0.28s | 0.28s |
+| vmForks | node | true | 0.38s | 0.38s | 0.29s | 0.28s |
+| vmForks | node | false | 0.38s | 0.38s | 0.30s | 0.28s |
+| forks | jsdom | true | — | — | 0.63s | 0.58s |
+| forks | happy-dom | true | — | — | 0.41s | 0.39s |
 
 ### node-library
 
 A mid-size published library: 127 modules in 3 layers, 40 test files that import the modules they test directly, so the per-file subgraphs are largely disjoint.
 
-| pool | env | isolate | fsModuleCache | cold | warm |
-|---|---|---|---|---:|---:|
-| forks | node | true | false | 0.94s | 0.94s |
-| forks | node | true | true | 0.97s | 0.81s |
-| forks | node | false | false | 0.47s | 0.48s |
-| forks | node | false | true | 0.48s | 0.35s |
-| threads | node | true | false | 0.79s | 0.80s |
-| threads | node | true | true | 0.88s | 0.76s |
-| threads | node | false | false | 0.41s | 0.41s |
-| threads | node | false | true | 0.49s | 0.35s |
-| forks | jsdom | true | false | — | 3.57s |
+| pool | env | isolate | fsModuleCache | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---|---:|---:|---:|---:|
+| forks | node | true | false | 0.88s | 0.80s | 0.86s | 0.75s |
+| forks | node | true | true | 0.89s | 0.77s | 0.78s | 0.65s |
+| forks | node | false | false | 0.46s | 0.43s | 0.45s | 0.42s |
+| forks | node | false | true | 0.46s | 0.43s | 0.33s | 0.31s |
+| threads | node | true | false | 0.74s | 0.64s | 0.74s | 0.65s |
+| threads | node | true | true | 0.78s | 0.67s | 0.68s | 0.55s |
+| threads | node | false | false | 0.39s | 0.37s | 0.39s | 0.38s |
+| threads | node | false | true | 0.42s | 0.40s | 0.30s | 0.28s |
+| forks | jsdom | true | false | — | — | 3.40s | 3.14s |
 
 ### node-backend
 
 An express 5 + zod + pino + dayjs + lodash API service with 16 integration-style test files that do real work per test (hundreds of validations, CRUD flows over in-memory repos).
 
-| pool | isolate | cold | warm |
-|---|---|---:|---:|
-| forks | true | 0.68s | 0.73s |
-| forks | false | — | 0.51s |
-| threads | true | — | 0.65s |
-| threads | false | — | 0.47s |
-| vmThreads | true | — | 0.57s |
-| vmThreads | false | — | 0.54s |
-| vmForks | true | — | 0.56s |
-| vmForks | false | — | 0.55s |
+| pool | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---:|---:|---:|---:|
+| forks | true | 0.64s | 0.59s | 0.64s | 0.59s |
+| forks | false | — | — | 0.47s | 0.55s |
+| threads | true | — | — | 0.56s | 0.58s |
+| threads | false | — | — | 0.44s | 0.42s |
+| vmThreads | true | — | — | 0.51s | 0.47s |
+| vmThreads | false | — | — | 0.51s | 0.47s |
+| vmForks | true | — | — | 0.55s | 0.51s |
+| vmForks | false | — | — | 0.55s | 0.50s |
 
 ### deps-heavy
 
 Thin glue over 10 real packages covering the shapes that matter for module handling: CJS monoliths (lodash, semver), many-file ESM graphs (lodash-es, date-fns, rxjs), single big ESM (zod), dual packages (yaml, uuid). Node pools pay externals once per worker; vm pools re-evaluate them per context.
 
-| pool | isolate | cold | warm |
-|---|---|---:|---:|
-| forks | true | 2.22s | 2.23s |
-| forks | false | — | 1.24s |
-| threads | true | — | 2.16s |
-| threads | false | — | 1.28s |
-| vmThreads | true | 1.58s | 1.75s |
-| vmThreads | false | — | 1.77s |
-| vmForks | true | — | 1.64s |
-| vmForks | false | — | 1.71s |
+| pool | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---:|---:|---:|---:|
+| forks | true | 2.11s | 2.05s | 2.20s | 2.10s |
+| forks | false | — | — | 1.24s | 1.23s |
+| threads | true | — | — | 2.07s | 1.99s |
+| threads | false | — | — | 1.22s | 1.18s |
+| vmThreads | true | 1.55s | 0.72s | 1.59s | 0.70s |
+| vmThreads | false | — | — | 1.57s | 0.69s |
+| vmForks | true | — | — | 1.65s | 0.73s |
+| vmForks | false | — | — | 1.65s | 0.75s |
 
 ### react-spa
 
 A product SPA tested with Testing Library: 92 ts/tsx modules across 6 features, CSS and CSS modules, hooks, a `vi.mock`ed api layer and a jest-dom setup file — run in jsdom, happy-dom and real Chromium.
 
-| pool | env | isolate | fsModuleCache | cold | warm |
-|---|---|---|---|---:|---:|
-| forks | jsdom | true | false | 3.23s | 3.29s |
-| forks | jsdom | false | false | — | 1.04s |
-| forks | happy-dom | true | false | — | 1.85s |
-| forks | happy-dom | false | false | — | 0.74s |
-| threads | jsdom | true | false | — | 2.82s |
-| threads | jsdom | false | false | — | 1.10s |
-| threads | happy-dom | true | false | — | 1.86s |
-| threads | happy-dom | false | false | — | 0.75s |
-| vmThreads | jsdom | true | false | — | 1.36s |
-| vmThreads | jsdom | false | false | — | 1.37s |
-| vmThreads | happy-dom | true | false | — | 1.03s |
-| vmThreads | happy-dom | false | false | — | 1.05s |
-| forks | jsdom | true | true | 3.21s | 3.57s |
-| browser | chromium | true | false | 2.67s | 2.48s |
+| pool | env | isolate | fsModuleCache | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---|---:|---:|---:|---:|
+| forks | jsdom | true | false | 3.10s | 3.16s | 3.08s | 3.12s |
+| forks | jsdom | false | false | — | — | 1.10s | 1.12s |
+| forks | happy-dom | true | false | — | — | 1.94s | 1.97s |
+| forks | happy-dom | false | false | — | — | 0.77s | 0.77s |
+| threads | jsdom | true | false | — | — | 2.83s | 2.75s |
+| threads | jsdom | false | false | — | — | 1.03s | 1.01s |
+| threads | happy-dom | true | false | — | — | 1.76s | 1.66s |
+| threads | happy-dom | false | false | — | — | 0.71s | 0.70s |
+| vmThreads | jsdom | true | false | — | — | 1.25s | 1.07s |
+| vmThreads | jsdom | false | false | — | — | 1.27s | 1.10s |
+| vmThreads | happy-dom | true | false | — | — | 0.98s | 0.87s |
+| vmThreads | happy-dom | false | false | — | — | 0.97s | 0.85s |
+| forks | jsdom | true | true | 3.07s | 3.12s | 3.00s | 3.09s |
+| browser | chromium | true | false | 2.43s | 2.06s | 2.40s | 2.01s |
 
 ### vue-spa
 
 37 single-file components plus composables, tested with @vue/test-utils. The SFC compilation through @vitejs/plugin-vue makes this the expensive-transform fixture.
 
-| pool | env | isolate | cold | warm |
-|---|---|---|---:|---:|
-| forks | jsdom | true | 2.24s | 2.21s |
-| forks | jsdom | false | — | 1.07s |
-| forks | happy-dom | true | — | 1.25s |
-| forks | happy-dom | false | — | 0.72s |
-| threads | jsdom | true | — | 1.97s |
-| threads | jsdom | false | — | 1.02s |
-| threads | happy-dom | true | — | 1.28s |
-| threads | happy-dom | false | — | 0.75s |
-| browser | chromium | true | 2.11s | 2.00s |
+| pool | env | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---:|---:|---:|---:|
+| forks | jsdom | true | 2.13s | 2.08s | 2.13s | 2.05s |
+| forks | jsdom | false | — | — | 1.08s | 1.07s |
+| forks | happy-dom | true | — | — | 1.29s | 1.27s |
+| forks | happy-dom | false | — | — | 0.71s | 0.75s |
+| threads | jsdom | true | — | — | 1.96s | 1.97s |
+| threads | jsdom | false | — | — | 1.00s | 1.03s |
+| threads | happy-dom | true | — | — | 1.19s | 1.16s |
+| threads | happy-dom | false | — | — | 0.70s | 0.69s |
+| browser | chromium | true | 2.03s | 1.60s | 1.94s | 1.58s |
 
 ### design-system
 
 80 components with per-component CSS, and every one of the 80 test files imports from the root barrel — each file pays the whole library plus a DOM environment. The classic component-library trap.
 
-| pool | env | isolate | cold | warm |
-|---|---|---|---:|---:|
-| forks | jsdom | true | 8.21s | 8.37s |
-| forks | jsdom | false | — | 1.35s |
-| forks | happy-dom | true | — | 5.44s |
-| forks | happy-dom | false | — | 1.03s |
-| vmThreads | jsdom | true | — | 2.27s |
-| vmThreads | jsdom | false | — | 2.24s |
-| vmThreads | happy-dom | true | — | 1.88s |
-| vmThreads | happy-dom | false | — | 1.88s |
-| browser | chromium | true | 5.39s | 5.33s |
+| pool | env | isolate | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---:|---:|---:|---:|
+| forks | jsdom | true | 8.11s | 8.30s | 8.11s | 8.31s |
+| forks | jsdom | false | — | — | 1.29s | 1.32s |
+| forks | happy-dom | true | — | — | 5.22s | 5.15s |
+| forks | happy-dom | false | — | — | 0.96s | 0.98s |
+| vmThreads | jsdom | true | — | — | 2.09s | 1.72s |
+| vmThreads | jsdom | false | — | — | 2.09s | 1.70s |
+| vmThreads | happy-dom | true | — | — | 1.81s | 1.47s |
+| vmThreads | happy-dom | false | — | — | 1.80s | 1.46s |
+| browser | chromium | true | 5.14s | 4.79s | 5.10s | 4.65s |
 
 ### barrel-hell
 
 The same barrel pathology without DOM or JSX: 817 modules behind nested barrels, 20 test files using ~3 symbols each, so every file evaluates the full graph.
 
-| pool | isolate | fsModuleCache | cold | warm |
-|---|---|---|---:|---:|
-| forks | true | false | 1.98s | 1.98s |
-| forks | true | true | 2.09s | 1.36s |
-| forks | false | false | 1.42s | 1.37s |
-| forks | false | true | 1.45s | 0.77s |
-| threads | true | false | 1.26s | 1.27s |
-| threads | true | true | 1.65s | 1.08s |
-| threads | false | false | 0.91s | 0.91s |
-| threads | false | true | 1.18s | 0.64s |
+| pool | isolate | fsModuleCache | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---:|---:|---:|---:|
+| forks | true | false | 1.90s | 1.74s | 1.92s | 1.70s |
+| forks | true | true | 2.06s | 1.72s | 1.33s | 1.08s |
+| forks | false | false | 1.39s | 1.36s | 1.35s | 1.36s |
+| forks | false | true | 1.43s | 1.40s | 0.76s | 0.71s |
+| threads | true | false | 1.26s | 1.27s | 1.25s | 1.25s |
+| threads | true | true | 1.64s | 1.42s | 1.05s | 0.91s |
+| threads | false | false | 0.92s | 0.93s | 0.91s | 0.93s |
+| threads | false | true | 1.18s | 1.15s | 0.63s | 0.58s |
 
 ### enterprise-monolith
 
 Big-repo CI: ~1280 modules with 12-deep import chains, import cycles, path aliases, dynamic imports, JSON imports, and 15 jsdom-pragma files among the 150 test files (mixed environments fragment worker reuse).
 
-| pool | isolate | fsModuleCache | maxWorkers | cold | warm |
-|---|---|---|---|---:|---:|
-| forks | true | false | default | 8.09s | 7.55s |
-| forks | true | true | default | 8.95s | 6.87s |
-| forks | false | false | default | 2.77s | 3.22s |
-| forks | false | true | default | 2.91s | 2.50s |
-| threads | true | false | default | 5.91s | 5.96s |
-| threads | true | true | default | 6.42s | 5.04s |
-| threads | false | false | default | 2.12s | 2.41s |
-| threads | false | true | default | 2.44s | 2.11s |
-| forks | false | false | 50% | — | 3.26s |
+| pool | isolate | fsModuleCache | maxWorkers | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---|---:|---:|---:|---:|
+| forks | true | false | default | 7.37s | 5.92s | 7.24s | 5.83s |
+| forks | true | true | default | 7.32s | 5.99s | 6.36s | 5.16s |
+| forks | false | false | default | 2.73s | 2.77s | 3.24s | 3.10s |
+| forks | false | true | default | 2.85s | 2.85s | 2.26s | 2.22s |
+| threads | true | false | default | 5.36s | 5.25s | 5.32s | 5.15s |
+| threads | true | true | default | 5.90s | 5.18s | 5.02s | 4.43s |
+| threads | false | false | default | 2.12s | 2.16s | 2.49s | 2.42s |
+| threads | false | true | default | 2.48s | 2.45s | 1.90s | 1.98s |
+| forks | false | false | 50% | — | — | 3.36s | 3.17s |
 
 ### long-haul
 
 The worker-lifetime endurance fixture: 80 jsdom test files through 2 workers, every file holding a ~15MB module-level dataset and rendering tables over it. Node pools rebuild the environment and re-import the externalized dependencies for each of a worker's 40 files; vm pool workers pay once, reuse compiled scripts across contexts, and get recycled several times per run by the pinned 512MB `vmMemoryLimit` — the recycle path no other app enters. Short fixtures understate the vm pools; this is the fixture where they win by a wide margin. (World *retention* is deliberately out of scope: workers report lazy heap numbers, so leak regressions are covered by Vitest's own reachability tests, not wall clock.)
 
-| pool | env | isolate | workers | cold | warm |
-|---|---|---|---|---:|---:|
-| forks | jsdom | true | 2 | — | 19.24s |
-| threads | jsdom | true | 2 | — | 17.32s |
-| vmThreads | jsdom | true | 2 | — | 5.89s |
-| vmForks | jsdom | true | 2 | 6.04s | 6.08s |
-| forks | happy-dom | true | 2 | — | 12.13s |
-| vmForks | happy-dom | true | 2 | — | 5.67s |
+| pool | env | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---:|---:|---:|---:|
+| forks | jsdom | — | — | 18.88s | 18.24s |
+| threads | jsdom | — | — | 17.28s | 16.72s |
+| vmThreads | jsdom | — | — | 5.82s | 5.13s |
+| vmForks | jsdom | 6.02s | 5.15s | 6.03s | 5.13s |
+| forks | happy-dom | — | — | 11.38s | 10.89s |
+| vmForks | happy-dom | — | — | 5.43s | 4.06s |
 
 ### cpu-bound
 
 30 test files that burn real CPU (hashing, sieving, matrix multiplication) on an 8-module graph. The tests themselves dominate, so only scheduling — `maxWorkers`, pool choice — changes anything.
 
-| pool | isolate | maxWorkers | cold | warm |
-|---|---|---|---:|---:|
-| forks | true | 25% | — | 1.51s |
-| forks | true | 50% | — | 1.11s |
-| forks | true | 100% | — | 0.94s |
-| threads | true | 25% | — | 1.39s |
-| threads | true | 50% | — | 1.04s |
-| threads | true | 100% | — | 0.87s |
-| forks | false | 100% | — | 0.66s |
+| pool | isolate | maxWorkers | 4.1.10 cold | 5.0.0-rc.2 cold | 4.1.10 warm | 5.0.0-rc.2 warm |
+|---|---|---|---:|---:|---:|---:|
+| forks | true | 25% | — | — | 1.55s | 1.43s |
+| forks | true | 50% | — | — | 1.18s | 1.08s |
+| forks | true | 100% | — | — | 0.94s | 0.88s |
+| threads | true | 25% | — | — | 1.45s | 1.33s |
+| threads | true | 50% | — | — | 1.09s | 1.01s |
+| threads | true | 100% | — | — | 0.91s | 0.83s |
+| forks | false | 100% | — | — | 0.66s | 0.63s |
 
 ## Design
 
