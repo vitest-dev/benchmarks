@@ -114,6 +114,14 @@ const APPS = {
       { pool: 'forks', env: 'node', isolate: f, fsCache: f, state: 'warm', workers: '50%' },
     ],
   },
+  'enterprise-monolith-xl': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: t, state: 'warm' },
+    envs: ['node'],
+    primary: 'node',
+    // the same graph as enterprise-monolith with ~5x the files; isolate:true
+    // only gets slower in proportion, so it's left to the full matrix
+    dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [f], fsCache: [f, t], state: ['warm'] },
+  },
   'long-haul': {
     best: { pool: 'vmForks', env: 'happy-dom', isolate: t, fsCache: f, state: 'warm', workers: '2' },
     envs: ['jsdom', 'happy-dom'],
@@ -127,6 +135,30 @@ const APPS = {
       { pool: 'forks', env: 'happy-dom', isolate: t, fsCache: f, state: 'warm', workers: '2' },
       { pool: 'vmForks', env: 'happy-dom', isolate: t, fsCache: f, state: 'warm', workers: '2' },
     ],
+  },
+  'setup-mocks': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: t, state: 'warm' },
+    envs: ['node'],
+    primary: 'node',
+    // isolate:true re-evaluates the 1500-module tree for every one of the
+    // 800 files (~1 minute per rep), so it only runs in the full matrix;
+    // the worker-count rows show how per-file round trips scale with the
+    // number of workers queueing on the main thread; with one worker all
+    // files share one run request and nothing else queues
+    dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [f], fsCache: [f, t], state: ['cold', 'warm'] },
+    extra: [
+      { pool: 'forks', env: 'node', isolate: f, fsCache: f, state: 'warm', workers: '1' },
+      { pool: 'forks', env: 'node', isolate: f, fsCache: f, state: 'warm', workers: '25%' },
+      { pool: 'forks', env: 'node', isolate: f, fsCache: f, state: 'warm', workers: '50%' },
+    ],
+  },
+  'late-graphs': {
+    best: { pool: 'forks', env: 'node', isolate: f, fsCache: t, state: 'warm' },
+    envs: ['node'],
+    primary: 'node',
+    // the shape only exists when workers are reused across files, so only
+    // isolate:false; the app fixes maxWorkers itself
+    dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [f], fsCache: [f, t], state: ['cold', 'warm'] },
   },
   'cpu-bound': {
     best: { pool: 'forks', env: 'node', isolate: f, fsCache: f, state: 'warm', workers: '100%' },

@@ -155,6 +155,46 @@ importers:
         specifier: 4.1.10
         version: 4.1.10(@types/node@26.1.1)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.6)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(yaml@2.9.0))
 
+  apps/enterprise-monolith-xl:
+    dependencies:
+      dayjs:
+        specifier: 1.11.21
+        version: 1.11.21
+      zod:
+        specifier: 4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@vitest/coverage-istanbul':
+        specifier: 4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      '@vitest/coverage-v8':
+        specifier: 4.1.10
+        version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      jsdom:
+        specifier: 29.1.1
+        version: 29.1.1
+      vite:
+        specifier: 8.1.4
+        version: 8.1.4(@types/node@26.1.1)(yaml@2.9.0)
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.6)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(yaml@2.9.0))
+
+  apps/late-graphs:
+    devDependencies:
+      '@vitest/coverage-istanbul':
+        specifier: 4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      '@vitest/coverage-v8':
+        specifier: 4.1.10
+        version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
+      vite:
+        specifier: 8.1.4
+        version: 8.1.4(@types/node@26.1.1)(yaml@2.9.0)
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.6)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(yaml@2.9.0))
+
   apps/long-haul:
     devDependencies:
       '@testing-library/dom':
@@ -291,6 +331,21 @@ importers:
       playwright:
         specifier: 1.61.1
         version: 1.61.1
+      vite:
+        specifier: 8.1.4
+        version: 8.1.4(@types/node@26.1.1)(yaml@2.9.0)
+      vitest:
+        specifier: 4.1.10
+        version: 4.1.10(@types/node@26.1.1)(@vitest/browser-playwright@4.1.10)(@vitest/coverage-istanbul@4.1.10)(@vitest/coverage-v8@4.1.10)(happy-dom@20.10.6)(jsdom@29.1.1)(vite@8.1.4(@types/node@26.1.1)(yaml@2.9.0))
+
+  apps/setup-mocks:
+    devDependencies:
+      '@vitest/coverage-istanbul':
+        specifier: 4.1.10
+        version: 4.1.10(vitest@4.1.10)
+      '@vitest/coverage-v8':
+        specifier: 4.1.10
+        version: 4.1.10(@vitest/browser@4.1.10)(vitest@4.1.10)
       vite:
         specifier: 8.1.4
         version: 8.1.4(@types/node@26.1.1)(yaml@2.9.0)
