@@ -14,7 +14,7 @@ import { createApp } from '../../tools/generator/helpers.mjs'
 
 const REPOS = 8
 const SERVICES = 12
-const TESTS = 16
+const TESTS = 64
 
 const app = createApp(import.meta.url)
 
@@ -149,23 +149,23 @@ describe('svc${svc} async flows (t${t})', () => {
   })
 
   it('creates entities one at a time', async () => {
-    for (let i = 0; i < 8000; i++)
+    for (let i = 0; i < 16000; i++)
       await svc${svc}Create({ name: 'item-' + i, amount: i })
     const summary = await svc${svc}Summarize()
-    expect(summary.count).toBe(8000)
-    expect(summary.total).toBe(31996000)
+    expect(summary.count).toBe(16000)
+    expect(summary.total).toBe(127992000)
   })
 
   it('creates entities in parallel batches', async () => {
-    for (let batch = 0; batch < 80; batch++)
+    for (let batch = 0; batch < 160; batch++)
       await svc${svc}CreateMany(Array.from({ length: 100 }, (_, i) => ({ name: 'b' + batch + '-' + i, amount: 1 })))
     const summary = await svc${svc}Summarize()
-    expect(summary.count).toBe(8000)
-    expect(summary.total).toBe(8000)
+    expect(summary.count).toBe(16000)
+    expect(summary.total).toBe(16000)
   })
 
   it('reads back what it wrote', async () => {
-    const created = await svc${svc}CreateMany(Array.from({ length: 2000 }, (_, i) => ({ name: 'r' + i, amount: i })))
+    const created = await svc${svc}CreateMany(Array.from({ length: 4000 }, (_, i) => ({ name: 'r' + i, amount: i })))
     for (const entity of created)
       expect((await svc${svc}Get(entity.id)).name).toBe(entity.name)
     await expect(svc${svc}Get(100000)).rejects.toThrow('not found')
