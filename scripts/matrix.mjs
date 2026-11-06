@@ -57,6 +57,16 @@ const APPS = {
       { pool: 'forks', env: 'node', isolate: t, fsCache: f, state: 'cold' },
     ],
   },
+  'async-service': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: f, state: 'warm' },
+    envs: ['node'],
+    primary: 'node',
+    dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [t, f], fsCache: [f], state: ['warm'] },
+    // one worker, so the tests' own awaits dominate the run
+    extra: [
+      { pool: 'forks', env: 'node', isolate: t, fsCache: f, state: 'warm', workers: '1' },
+    ],
+  },
   'deps-heavy': {
     best: { pool: 'vmThreads', env: 'node', isolate: f, fsCache: f, state: 'warm' },
     envs: ['node'],
