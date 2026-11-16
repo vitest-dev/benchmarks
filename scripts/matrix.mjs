@@ -200,7 +200,7 @@ export function cellsFor(app, level) {
 
   if (level === 'quick') {
     return [
-      { pool: 'forks', env: spec.primary, isolate: true, fsCache: false, state: 'warm' },
+      { pool: 'forks', env: spec.primary, isolate: spec.dims.isolate.includes(true), fsCache: false, state: 'warm' },
       ...browserCells(spec, ['warm']),
     ]
   }
