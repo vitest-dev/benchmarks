@@ -158,6 +158,7 @@ const APPS = {
     primary: 'node',
     // the shape only exists when workers are reused across files, so only
     // isolate:false; the app fixes maxWorkers itself
+    isolates: [f],
     dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [f], fsCache: [f, t], state: ['cold', 'warm'] },
   },
   'cpu-bound': {
@@ -209,7 +210,7 @@ export function cellsFor(app, level) {
       ...cross({
         pool: POOLS,
         env: spec.envs,
-        isolate: [true, false],
+        isolate: spec.isolates ?? [true, false],
         fsCache: [false, true],
         state: ['cold', 'warm'],
         ...(spec.workers ? { workers: spec.workers } : {}),

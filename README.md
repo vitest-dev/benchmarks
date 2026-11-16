@@ -246,7 +246,7 @@ A large monorepo: about 1280 modules with 12-deep import chains, import cycles, 
 
 ### enterprise-monolith-xl
 
-enterprise-monolith's graph with 800 test files instead of 150, from the same generator, all in the node environment. That is about 70 files per worker on 12 cores instead of about 14, so under `isolate: false` whatever a reused worker pays per file over a large shared graph is paid five times as often. The original's jsdom files are left out: a worker isn't reused across environments, so mixing them in replaces workers every few files. The default matrix runs only `isolate: false`.
+enterprise-monolith's graph with 800 test files instead of 150, from the same generator, all in the node environment. That is about 70 files per worker on 12 cores instead of about 14, so under `isolate: false` whatever a reused worker pays per file over a large shared graph is paid five times as often. The original's jsdom files are left out: a worker isn't reused across environments, so mixing them in replaces workers every few files. The default matrix runs only `isolate: false`; `isolate: true` takes minutes per run and only runs in the full matrix.
 
 `node generate.mjs --shared=N` adds an N-module tree that every test file walks. That is graph a reused worker already has when its next file starts, so N scales what a per-file warm-modules snapshot re-sends without adding anything new for the worker to load. The default is 0, and the matrix uses the default.
 
