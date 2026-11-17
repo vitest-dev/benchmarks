@@ -15,14 +15,15 @@ pnpm bench                                  # default matrix, every app, 3 reps 
 pnpm bench --apps react-spa,barrel-hell --runs 5
 pnpm bench --matrix quick --runs 1          # one representative cell per app
 
-# A/B a local vitest build against the pinned release
-pnpm bench --label main                     # 1. measure the pinned release first
-# 2. link the local build (see below), then
-pnpm bench --label branch
+# A/B a vitest branch against vitest main, both as local builds (see below)
+pnpm bench --label main                     # 1. with the main build linked
+pnpm bench --label branch                   # 2. with the branch build linked
 pnpm compare results/main.json results/branch.json
 ```
 
 ### Benchmarking a local vitest build
+
+The pinned release is the baseline of the 4.1 vs 5.0 tables below, not a reference for new changes. To measure a change, compare a build of vitest `main` with a build of your branch.
 
 Link the local build into the workspace instead of pointing `--vitest` at its binary. Dependencies such as `@testing-library/jest-dom/vitest` import `vitest` themselves, and Node resolves that import to the pinned install. With `--vitest` alone the tests use one `expect` and the matchers register on another, so every jsdom cell fails with `Invalid Chai property`. The browser cells also need the matching `@vitest/browser-playwright`.
 
