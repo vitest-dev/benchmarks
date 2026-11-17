@@ -57,6 +57,12 @@ const APPS = {
       { pool: 'forks', env: 'node', isolate: t, fsCache: f, state: 'cold' },
     ],
   },
+  'async-service': {
+    best: { pool: 'threads', env: 'node', isolate: f, fsCache: f, state: 'warm' },
+    envs: ['node'],
+    primary: 'node',
+    dims: { pool: ['forks', 'threads'], env: ['node'], isolate: [t, f], fsCache: [f], state: ['warm'] },
+  },
   'deps-heavy': {
     best: { pool: 'vmThreads', env: 'node', isolate: f, fsCache: f, state: 'warm' },
     envs: ['node'],
